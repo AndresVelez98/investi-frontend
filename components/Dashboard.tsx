@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useState } from "react";
 
 interface Asset {
@@ -11,31 +10,85 @@ interface Asset {
     currency: string;
 }
 
+// Generate a fake but realistic sparkline based on change direction
+function generateSparkline(change_pct: number, points = 20): number[] {
+    const trend = change_pct / 100;
+    const data: number[] = [50];
+    for (let i = 1; i < points; i++) {
+        const random = (Math.random() - 0.48) * 4;
+        const trendBias = trend * 3;
+        data.push(Math.max(10, Math.min(90, data[i - 1] + random + trendBias)));
+    }
+    return data;
+}
+
+function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
+    const width = 80;
+    const height = 32;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const points = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * height;
+        return `${x},${y}`;
+    }).join(" ");
+
+    const color = isUp ? "#00d4a0" : "#ff6b6b";
+    const fillId = `fill-${isUp ? "up" : "down"}`;
+
+    return (
+        <svg width={width} height={height} style={{ display: "block" }}>
+            <defs>
+                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </linearGradient>
+            </defs>
+            <polygon
+                points={`0,${height} ${points} ${width},${height}`}
+                fill={`url(#${fillId})`}
+            />
+            <polyline
+                points={points}
+                fill="none"
+                stroke={color}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
 function AssetCard({ asset }: { asset: Asset }) {
     const isUp = asset.change_pct >= 0;
+    const [sparkline] = useState(() => generateSparkline(asset.change_pct));
+
     return (
-        <div className="glass-card" style={{ padding: "18px 20px", cursor: "default" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <div className="glass-card" style={{ padding: "16px 18px", cursor: "default" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{asset.ticker}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{asset.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{asset.name}</div>
                 </div>
-                <span className={`badge badge-${asset.category === "Cripto" ? "gold" : "blue"}`}>
+                <span className={`badge badge-${asset.category === "Cripto" ? "gold" : asset.category === "ETFs" ? "green" : "blue"}`} style={{ fontSize: 10 }}>
                     {asset.category}
                 </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                    ${asset.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-                <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: isUp ? "var(--green)" : "var(--red)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>
+                    <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                        ${asset.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isUp ? "var(--green)" : "var(--red)", marginTop: 2 }}>
                         {isUp ? "▲" : "▼"} {Math.abs(asset.change_pct).toFixed(2)}%
-                    </div>
-                    <div style={{ fontSize: 12, color: isUp ? "var(--green)" : "var(--red)" }}>
-                        {isUp ? "+" : ""}{asset.change.toFixed(2)}
+                        <span style={{ fontWeight: 400, marginLeft: 4, color: "var(--text-muted)" }}>
+                            ({isUp ? "+" : ""}{asset.change.toFixed(2)})
+                        </span>
                     </div>
                 </div>
+                <Sparkline data={sparkline} isUp={isUp} />
             </div>
         </div>
     );
@@ -43,7 +96,37 @@ function AssetCard({ asset }: { asset: Asset }) {
 
 function SkeletonCard() {
     return (
-        <div className="glass-card loading-shimmer" style={{ padding: "18px 20px", height: 104 }} />
+        <div className="glass-card loading-shimmer" style={{ padding: "18px 20px", height: 110 }} />
+    );
+}
+
+// Market summary bar
+function MarketSummary({ assets }: { assets: Asset[] }) {
+    if (assets.length === 0) return null;
+    const gainers = assets.filter(a => a.change_pct > 0).length;
+    const losers = assets.filter(a => a.change_pct < 0).length;
+    const avgChange = assets.reduce((sum, a) => sum + a.change_pct, 0) / assets.length;
+    const isPositive = avgChange >= 0;
+
+    return (
+        <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 12,
+            marginBottom: 28,
+        }}>
+            {[
+                { label: "Tendencia general", value: `${isPositive ? "+" : ""}${avgChange.toFixed(2)}%`, color: isPositive ? "var(--green)" : "var(--red)", emoji: isPositive ? "📈" : "📉" },
+                { label: "Activos al alza", value: `${gainers} de ${assets.length}`, color: "var(--green)", emoji: "🟢" },
+                { label: "Activos a la baja", value: `${losers} de ${assets.length}`, color: "var(--red)", emoji: "🔴" },
+            ].map((stat, i) => (
+                <div key={i} className="glass-card" style={{ padding: "14px 18px", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{stat.emoji}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: stat.color }}>{stat.value}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{stat.label}</div>
+                </div>
+            ))}
+        </div>
     );
 }
 
@@ -71,7 +154,7 @@ export default function Dashboard() {
         setUserName(sessionStorage.getItem("userName") || "Inversor");
         setProfile(sessionStorage.getItem("profile") || "Moderado");
         fetchAssets();
-        const interval = setInterval(fetchAssets, 30000); // refresh every 30s
+        const interval = setInterval(fetchAssets, 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -85,13 +168,20 @@ export default function Dashboard() {
         Agresivo: "badge-gold",
     };
 
+    const getGreeting = () => {
+        const h = new Date().getHours();
+        if (h < 12) return "Buenos días";
+        if (h < 18) return "Buenas tardes";
+        return "Buenas noches";
+    };
+
     return (
         <div style={{ padding: 32, maxWidth: 1000, margin: "0 auto" }}>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                     <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
-                        Buenos días, {userName} 👋
+                        {getGreeting()}, {userName} 👋
                     </h1>
                     <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
                         Mercados en tiempo real · Actualización automática cada 30s
@@ -101,11 +191,7 @@ export default function Dashboard() {
                     <span className={`badge ${profileColors[profile] || "badge-blue"}`}>
                         Perfil: {profile}
                     </span>
-                    <button
-                        onClick={fetchAssets}
-                        className="btn-ghost"
-                        style={{ padding: "8px 14px", fontSize: 13 }}
-                    >
+                    <button onClick={fetchAssets} className="btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                         </svg>
@@ -120,43 +206,40 @@ export default function Dashboard() {
                 </p>
             )}
 
-            {/* Stocks Section */}
-            <section style={{ marginBottom: 32 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                    <span className="tag">Acciones</span>
+            {/* Market Summary */}
+            {!loading && <MarketSummary assets={assets} />}
+
+            {/* Stocks */}
+            <section style={{ marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span className="tag">📊 Acciones</span>
                     <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                    {loading
-                        ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
-                        : stocks.map(a => <AssetCard key={a.ticker} asset={a} />)}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
+                    {loading ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />) : stocks.map(a => <AssetCard key={a.ticker} asset={a} />)}
                 </div>
             </section>
 
-            {/* Crypto Section */}
-            <section style={{ marginBottom: 32 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                    <span className="tag">Criptodivisas</span>
+            {/* Crypto */}
+            <section style={{ marginBottom: 28 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <span className="tag">₿ Criptodivisas</span>
                     <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                    {loading
-                        ? Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
-                        : crypto.map(a => <AssetCard key={a.ticker} asset={a} />)}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
+                    {loading ? Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />) : crypto.map(a => <AssetCard key={a.ticker} asset={a} />)}
                 </div>
             </section>
 
-            {/* ETFs Section */}
+            {/* ETFs */}
             {(loading || etfs.length > 0) && (
-                <section style={{ marginBottom: 32 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                        <span className="tag">ETFs</span>
+                <section style={{ marginBottom: 28 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                        <span className="tag">📦 ETFs</span>
                         <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-                        {loading
-                            ? <SkeletonCard />
-                            : etfs.map(a => <AssetCard key={a.ticker} asset={a} />)}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
+                        {loading ? <SkeletonCard /> : etfs.map(a => <AssetCard key={a.ticker} asset={a} />)}
                     </div>
                 </section>
             )}
@@ -176,13 +259,9 @@ export default function Dashboard() {
                             key={action.href}
                             href={action.href}
                             style={{
-                                display: "block",
-                                padding: "16px",
-                                background: "var(--bg-secondary)",
-                                border: "1px solid var(--border)",
-                                borderRadius: "var(--radius-md)",
-                                textDecoration: "none",
-                                transition: "all 0.2s ease",
+                                display: "block", padding: "16px",
+                                background: "var(--bg-secondary)", border: "1px solid var(--border)",
+                                borderRadius: "var(--radius-md)", textDecoration: "none", transition: "all 0.2s ease",
                             }}
                             onMouseEnter={e => {
                                 (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
