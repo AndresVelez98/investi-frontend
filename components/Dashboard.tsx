@@ -22,7 +22,7 @@ function generateSparkline(change_pct: number, points = 20): number[] {
     return data;
 }
 
-function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
+function Sparkline({ data, isUp, id }: { data: number[]; isUp: boolean; id: string }) {
     const width = 80;
     const height = 32;
     const min = Math.min(...data);
@@ -35,7 +35,7 @@ function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
     }).join(" ");
 
     const color = isUp ? "#00d4a0" : "#ff6b6b";
-    const fillId = `fill-${isUp ? "up" : "down"}`;
+    const fillId = `fill-${id}`;
 
     return (
         <svg width={width} height={height} style={{ display: "block" }}>
@@ -88,7 +88,7 @@ function AssetCard({ asset }: { asset: Asset }) {
                         </span>
                     </div>
                 </div>
-                <Sparkline data={sparkline} isUp={isUp} />
+                <Sparkline data={sparkline} isUp={isUp} id={asset.ticker} />
             </div>
         </div>
     );
