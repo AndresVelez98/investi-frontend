@@ -23,8 +23,8 @@ function generateSparkline(change_pct: number, points = 20): number[] {
 }
 
 function Sparkline({ data, isUp, id }: { data: number[]; isUp: boolean; id: string }) {
-    const width = 80;
-    const height = 32;
+    const width = 200;
+    const height = 36;
     const min = Math.min(...data);
     const max = Math.max(...data);
     const range = max - min || 1;
@@ -38,7 +38,7 @@ function Sparkline({ data, isUp, id }: { data: number[]; isUp: boolean; id: stri
     const fillId = `fill-${id}`;
 
     return (
-        <svg width={width} height={height} style={{ display: "block" }}>
+        <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block" }}>
             <defs>
                 <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={color} stopOpacity="0.3" />
@@ -67,7 +67,8 @@ function AssetCard({ asset }: { asset: Asset }) {
 
     return (
         <div className="glass-card" style={{ padding: "16px 18px", cursor: "default" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            {/* Top row: ticker + badge */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 <div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{asset.ticker}</div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{asset.name}</div>
@@ -76,18 +77,20 @@ function AssetCard({ asset }: { asset: Asset }) {
                     {asset.category}
                 </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <div>
-                    <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                        ${asset.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: isUp ? "var(--green)" : "var(--red)", marginTop: 2 }}>
-                        {isUp ? "▲" : "▼"} {Math.abs(asset.change_pct).toFixed(2)}%
-                        <span style={{ fontWeight: 400, marginLeft: 4, color: "var(--text-muted)" }}>
-                            ({isUp ? "+" : ""}{asset.change.toFixed(2)})
-                        </span>
-                    </div>
+            {/* Price + change */}
+            <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                    ${asset.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: isUp ? "var(--green)" : "var(--red)", marginTop: 2 }}>
+                    {isUp ? "▲" : "▼"} {Math.abs(asset.change_pct).toFixed(2)}%
+                    <span style={{ fontWeight: 400, marginLeft: 4, color: "var(--text-muted)" }}>
+                        ({isUp ? "+" : ""}{asset.change.toFixed(2)})
+                    </span>
+                </div>
+            </div>
+            {/* Sparkline full width */}
+            <div style={{ width: "100%" }}>
                 <Sparkline data={sparkline} isUp={isUp} id={asset.ticker} />
             </div>
         </div>
