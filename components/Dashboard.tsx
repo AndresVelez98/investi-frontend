@@ -30,33 +30,13 @@ function Sparkline({ data, isUp, id }: { data: number[]; isUp: boolean; id: stri
     const range = max - min || 1;
     const points = data.map((v, i) => {
         const x = (i / (data.length - 1)) * width;
-        const y = height - ((v - min) / range) * height;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
         return `${x},${y}`;
     }).join(" ");
-
     const color = isUp ? "#00d4a0" : "#ff6b6b";
-    const fillId = `fill-${id}`;
-
     return (
         <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block" }}>
-            <defs>
-                <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-                    <stop offset="100%" stopColor={color} stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <polygon
-                points={`0,${height} ${points} ${width},${height}`}
-                fill={`url(#${fillId})`}
-            />
-            <polyline
-                points={points}
-                fill="none"
-                stroke={color}
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-            />
+            <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
     );
 }
@@ -285,3 +265,4 @@ export default function Dashboard() {
         </div>
     );
 }
+
