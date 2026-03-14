@@ -1,4 +1,3 @@
-cat > ~/Downloads/Investi/frontend/components/ChatInterface.tsx << 'ENDOFFILE'
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
