@@ -57,17 +57,21 @@ export default function ProfileSelector() {
     if (!email.trim() || !password.trim()) { setError("Por favor completa todos los campos."); return; }
     setError(""); setLoading(true);
     try {
+      const formData = new URLSearchParams();
+      formData.append("username", email.trim());
+      formData.append("password", password);
+
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.detail || "Credenciales incorrectas."); return; }
 
       sessionStorage.setItem("token", data.access_token);
-      sessionStorage.setItem("userName", data.user?.name || email.split("@")[0]);
-      sessionStorage.setItem("profile", data.user?.risk_profile || "Moderado");
+      sessionStorage.setItem("userName", data.name || email.split("@")[0]);
+      sessionStorage.setItem("profile", "Moderado");
       router.push("/dashboard");
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
@@ -114,10 +118,13 @@ export default function ProfileSelector() {
       if (!res.ok) { setError(data.detail || "Error al crear la cuenta."); setSaving(false); return; }
 
       // Auto login after register
+      const formData = new URLSearchParams();
+      formData.append("username", email.trim());
+      formData.append("password", password);
       const loginRes = await fetch(`${API}/api/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
       });
       const loginData = await loginRes.json();
       if (loginRes.ok) {
