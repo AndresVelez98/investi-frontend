@@ -234,6 +234,7 @@ export default function Dashboard() {
                 </h2>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
                     {[
+                        { href: "/learn", emoji: "🎓", title: "Aprender", desc: "Lecciones de finanzas con quiz" },
                         { href: "/chat", emoji: "💬", title: "Consultar IA", desc: "Pregunta sobre cualquier activo" },
                         { href: "/chat?mode=test", emoji: "🎯", title: "Test de Riesgo", desc: "Descubre tu perfil con IA" },
                         { href: "/calculator", emoji: "📊", title: "Calculadora", desc: "Proyecta tu inversión" },
@@ -265,4 +266,3 @@ export default function Dashboard() {
         </div>
     );
 }
-
