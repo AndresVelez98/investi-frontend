@@ -6,7 +6,7 @@ type Step = "auth" | "register-info" | "profile";
 type AuthMode = "login" | "register";
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
-const API = "https://investi-backend-production.up.railway.app";
+const API = "https://investi-backend-75t5.onrender.com";
 
 const PROFILES: { key: Profile; emoji: string; title: string; desc: string; color: string }[] = [
   {

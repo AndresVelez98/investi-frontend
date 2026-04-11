@@ -153,7 +153,7 @@ export default function ChatInterface() {
         } else {
             setIsLoading(true); setRiskMode(false);
             try {
-                const res = await fetch("https://investi-backend-production.up.railway.app/api/risk-test/evaluate", {
+                const res = await fetch("https://investi-backend-75t5.onrender.com/api/risk-test/evaluate", {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ answers: newAnswers, user_name: userName }),
                 });
@@ -180,7 +180,7 @@ export default function ChatInterface() {
         setMessages(prev => [...prev, { role: "user", content: trimmed }]);
         setIsLoading(true);
         try {
-            const res = await fetch("https://investi-backend-production.up.railway.app/api/chat", {
+            const res = await fetch("https://investi-backend-75t5.onrender.com/api/chat", {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: trimmed, profile }),
             });

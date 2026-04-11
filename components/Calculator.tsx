@@ -69,7 +69,7 @@ export default function Calculator() {
         setLoading(true);
         setResult(null);
         try {
-            const res = await fetch("https://investi-backend-production.up.railway.app/api/calculate", {
+            const res = await fetch("https://investi-backend-75t5.onrender.com/api/calculate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), amount: amt, months }),

@@ -122,7 +122,7 @@ export default function Dashboard() {
 
     const fetchAssets = async () => {
         try {
-            const res = await fetch("https://investi-backend-production.up.railway.app/api/market/top");
+            const res = await fetch("https://investi-backend-75t5.onrender.com/api/market/top");
             const data = await res.json();
             setAssets(data.assets || []);
             setLastUpdated(new Date());

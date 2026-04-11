@@ -3,7 +3,7 @@ import Sidebar from "../../components/Sidebar";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = "https://investi-backend-production.up.railway.app";
+const API = "https://investi-backend-75t5.onrender.com";
 
 interface Module {
     id: number;
