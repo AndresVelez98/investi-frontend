@@ -16,7 +16,7 @@ interface Message {
     };
 }
 
-const FREE_LIMIT = 5;
+const FREE_LIMIT = 9999;
 const STORAGE_KEY = "investi_usage";
 
 function getTodayKey() {
