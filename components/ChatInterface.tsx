@@ -247,7 +247,7 @@ const RISK_QUESTIONS_PREVIEW = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function ChatInterface() {
+export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floating" }) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const storedProfile = (typeof window !== "undefined" ? sessionStorage.getItem("profile") : null) || "Moderado";
@@ -367,9 +367,10 @@ export default function ChatInterface() {
     const profileColors: Record<Profile, string> = { Conservador: "badge-green", Moderado: "badge-blue", Agresivo: "badge-gold" };
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: mode === "floating" ? "100%" : "100vh" }}>
 
-            {/* Header */}
+            {/* Header — only in page mode */}
+            {mode === "page" && (
             <header style={{ padding: "12px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-secondary)", flexShrink: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <SantiAvatar size={36} />
@@ -416,6 +417,7 @@ export default function ChatInterface() {
                     </button>
                 </div>
             </header>
+            )}
 
             {/* Risk progress */}
             {riskMode && (
@@ -449,8 +451,8 @@ export default function ChatInterface() {
                 )}
                 <div ref={messagesEndRef} />
 
-                {/* Scroll to top floating button */}
-                {showScrollTop && (
+                {/* Scroll to top floating button — page mode only */}
+                {mode === "page" && showScrollTop && (
                     <button
                         onClick={scrollToTop}
                         title="Ir al inicio"
