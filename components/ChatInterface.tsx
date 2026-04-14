@@ -382,7 +382,7 @@ export default function ChatInterface() {
                     <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
                     {!riskMode && <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>🎯 Test de Riesgo</button>}
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => router.push("/dashboard")}
                         title="Volver al inicio"
                         style={{
                             background: "transparent",

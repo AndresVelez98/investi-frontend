@@ -51,10 +51,7 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
 
     const handleSalir = () => {
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("userName");
-        sessionStorage.removeItem("profile");
-        router.push("/");
+        router.push("/dashboard");
     };
 
     return (
