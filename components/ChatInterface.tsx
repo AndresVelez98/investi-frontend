@@ -1,6 +1,30 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+
+// ─── Theme Hook ───────────────────────────────────────────────────────────────
+
+function useTheme() {
+    const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+    useEffect(() => {
+        const saved = localStorage.getItem("investi_theme") as "dark" | "light" | null;
+        const initial = saved || "dark";
+        setTheme(initial);
+        document.documentElement.setAttribute("data-theme", initial);
+    }, []);
+
+    const toggle = useCallback(() => {
+        setTheme(prev => {
+            const next = prev === "dark" ? "light" : "dark";
+            localStorage.setItem("investi_theme", next);
+            document.documentElement.setAttribute("data-theme", next);
+            return next;
+        });
+    }, []);
+
+    return { theme, toggle };
+}
 
 const API = "https://investi-backend-75t5.onrender.com";
 const TRM_COP = 4200;
@@ -228,6 +252,10 @@ export default function ChatInterface() {
     const storedProfile = (typeof window !== "undefined" ? sessionStorage.getItem("profile") : null) || "Moderado";
     const userName = (typeof window !== "undefined" ? sessionStorage.getItem("userName") : null) || "";
 
+    const { theme, toggle: toggleTheme } = useTheme();
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+
     const [profile, setProfile] = useState<Profile>(storedProfile as Profile);
     const [messages, setMessages] = useState<Message[]>([{
         role: "assistant",
@@ -244,6 +272,15 @@ export default function ChatInterface() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+    const handleScroll = useCallback(() => {
+        const el = messagesContainerRef.current;
+        if (el) setShowScrollTop(el.scrollTop > 300);
+    }, []);
+
+    const scrollToTop = () => {
+        messagesContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     useEffect(() => {
         if (searchParams.get("mode") === "test") startRiskTest();
@@ -343,6 +380,15 @@ export default function ChatInterface() {
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
                     {!riskMode && <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>🎯 Test de Riesgo</button>}
+                    <button
+                        onClick={toggleTheme}
+                        title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+                        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, transition: "all 0.2s ease", flexShrink: 0 }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
+                    >
+                        {theme === "dark" ? "☀️" : "🌙"}
+                    </button>
                 </div>
             </header>
 
@@ -357,7 +403,7 @@ export default function ChatInterface() {
             )}
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div ref={messagesContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
                 {messages.map((msg, idx) => (
                     <div key={idx} className="animate-fade-in" style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
                         {msg.role === "assistant" && <SantiAvatar size={28} />}
@@ -377,6 +423,34 @@ export default function ChatInterface() {
                     </div>
                 )}
                 <div ref={messagesEndRef} />
+
+                {/* Scroll to top floating button */}
+                {showScrollTop && (
+                    <button
+                        onClick={scrollToTop}
+                        title="Ir al inicio"
+                        style={{
+                            position: "sticky",
+                            bottom: 12,
+                            alignSelf: "flex-end",
+                            width: 36, height: 36,
+                            borderRadius: "50%",
+                            background: "var(--accent)",
+                            border: "none",
+                            color: "#fff",
+                            cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 4px 16px rgba(79,126,248,0.4)",
+                            transition: "all 0.2s ease",
+                            fontSize: 16,
+                            zIndex: 10,
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+                        onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)")}
+                    >
+                        ↑
+                    </button>
+                )}
             </div>
 
             {/* Quick replies */}

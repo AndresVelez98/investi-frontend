@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #08090d;
   --bg-secondary: #0f1117;
   --bg-card: #151821;
@@ -24,6 +25,32 @@
   --radius-lg: 20px;
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 40px rgba(79, 126, 248, 0.12);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f4f6fc;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #eef1f9;
+  --border: #dde2f0;
+  --border-bright: #c4cce6;
+  --text-primary: #1a1f36;
+  --text-secondary: #4a5270;
+  --text-muted: #8b93b0;
+  --accent: #4f7ef8;
+  --accent-hover: #3d6ef0;
+  --accent-glow: rgba(79, 126, 248, 0.12);
+  --green: #00a87a;
+  --green-bg: rgba(0, 168, 122, 0.08);
+  --red: #d63031;
+  --red-bg: rgba(214, 48, 49, 0.08);
+  --gold: #e08e00;
+  --gold-bg: rgba(224, 142, 0, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 40px rgba(79, 126, 248, 0.10);
 }
 
 * {
