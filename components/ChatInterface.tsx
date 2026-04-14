@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 // ─── Theme Hook ───────────────────────────────────────────────────────────────
 
@@ -249,6 +249,7 @@ const RISK_QUESTIONS_PREVIEW = [
 
 export default function ChatInterface() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const storedProfile = (typeof window !== "undefined" ? sessionStorage.getItem("profile") : null) || "Moderado";
     const userName = (typeof window !== "undefined" ? sessionStorage.getItem("userName") : null) || "";
 
@@ -380,6 +381,39 @@ export default function ChatInterface() {
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
                     {!riskMode && <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>🎯 Test de Riesgo</button>}
+                    <button
+                        onClick={() => router.push("/")}
+                        title="Volver al inicio"
+                        style={{
+                            background: "transparent",
+                            border: "1px solid var(--border)",
+                            borderRadius: 8,
+                            padding: "6px 12px",
+                            display: "flex", alignItems: "center", gap: 6,
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            fontSize: 13, fontWeight: 500,
+                            transition: "all 0.2s ease",
+                            zIndex: 50,
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.color = "var(--red)";
+                            e.currentTarget.style.borderColor = "var(--red)";
+                            e.currentTarget.style.background = "var(--red-bg)";
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.color = "var(--text-muted)";
+                            e.currentTarget.style.borderColor = "var(--border)";
+                            e.currentTarget.style.background = "transparent";
+                        }}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Salir
+                    </button>
                 </div>
             </header>
 
