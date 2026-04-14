@@ -27,7 +27,7 @@ function useTheme() {
 }
 
 const API = "https://investi-backend-75t5.onrender.com";
-const TRM_COP = 4200;
+const TRM_COP = 4350; // TRM actualizada — actualizar periódicamente
 
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
@@ -317,8 +317,11 @@ function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Pr
 // ─── Markdown Text ────────────────────────────────────────────────────────────
 
 function MarkdownText({ text }: { text: string }) {
-    const cleanText = text.replace(/⚠️\s*\*?Este análisis es educativo[^*\n]*\*?/g, "").trimEnd();
-    const hasDisclaimer = text.includes("Este análisis es educativo");
+    // Strip disclaimer line — shown once globally below the input
+    const cleanText = text
+        .replace(/⚠️\s*\*?Este análisis es educativo[^*\n]*\*?/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trimEnd();
     return (
         <div style={{ lineHeight: 1.7 }}>
             {cleanText.split("\n").map((line, i) => {
@@ -337,11 +340,6 @@ function MarkdownText({ text }: { text: string }) {
                 });
                 return <div key={i}>{parts}</div>;
             })}
-            {hasDisclaimer && (
-                <div style={{ marginTop: 8, fontSize: 10, color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: 5 }}>
-                    ⚠️ Solo uso educativo · No constituye asesoría financiera oficial
-                </div>
-            )}
         </div>
     );
 }
@@ -381,11 +379,45 @@ const RISK_QUESTIONS_PREVIEW = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+// ─── Persistent storage helpers ──────────────────────────────────────────────
+
+function getStored(key: string): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(`investi_${key}`) || sessionStorage.getItem(key) || null;
+}
+
+function setStored(key: string, value: string) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(`investi_${key}`, value);
+    sessionStorage.setItem(key, value);
+}
+
+function buildGreeting(name: string, profile: string, returning: boolean): string {
+    const profileDesc = profile === "Conservador"
+        ? "prefieres seguridad antes que rendimiento."
+        : profile === "Moderado"
+        ? "buscas crecer sin exponerte demasiado."
+        : "te sientes cómodo con la volatilidad a cambio de mayor rentabilidad.";
+
+    if (returning && name) {
+        return `¡De nuevo por aquí, **${name}**! Tu perfil **${profile}** sigue activo — ${profileDesc}\n\n¿En qué te ayudo hoy?`;
+    }
+    return `Hola${name ? `, **${name}**` : ""}! Soy **Santi**, tu asesor financiero personal 👋\n\nTienes un perfil **${profile}** — ${profileDesc}\n\nPregúntame sobre cualquier activo, pídeme un plan para invertir en Colombia, o escribe **"Iniciar test de perfil"** para afinar tu perfil de riesgo.\n\n¿En qué te ayudo hoy?`;
+}
+
 export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floating" }) {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const storedProfile = (typeof window !== "undefined" ? sessionStorage.getItem("profile") : null) || "Moderado";
-    const userName = (typeof window !== "undefined" ? sessionStorage.getItem("userName") : null) || "";
+
+    const storedProfile = getStored("profile") || "Moderado";
+    const userName = getStored("userName") || "";
+    const isReturning = typeof window !== "undefined" && !!localStorage.getItem("investi_userName");
+
+    // Persist to both storages on mount
+    useEffect(() => {
+        if (storedProfile) setStored("profile", storedProfile);
+        if (userName) setStored("userName", userName);
+    }, []);
 
     useTheme(); // applies stored theme on mount
     const [showScrollTop, setShowScrollTop] = useState(false);
@@ -394,7 +426,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
     const [profile, setProfile] = useState<Profile>(storedProfile as Profile);
     const [messages, setMessages] = useState<Message[]>([{
         role: "assistant",
-        content: `Hola${userName ? `, ${userName}` : ""}! Soy **Santi**, tu asesor financiero personal 👋\n\nTienes un perfil **${storedProfile}** — ${storedProfile === "Conservador" ? "prefieres seguridad antes que rendimiento, y eso tiene todo el sentido." : storedProfile === "Moderado" ? "buscas crecer sin exponerte demasiado. Buen equilibrio." : "te sientes cómodo con la volatilidad a cambio de mayor rentabilidad. ¡Vamos!"}\n\nPregúntame sobre cualquier activo, pídeme un plan para invertir en Colombia, o escribe **"Iniciar test de perfil"** para afinar tu perfil de riesgo.\n\n¿En qué te ayudo hoy?`,
+        content: buildGreeting(userName, storedProfile, isReturning),
     }]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -457,7 +489,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 const data = await res.json();
                 const newProfile = (["Conservador", "Moderado", "Agresivo"].includes(data.profile) ? data.profile : "Moderado") as Profile;
                 setProfile(newProfile);
-                sessionStorage.setItem("profile", newProfile);
+                setStored("profile", newProfile);
                 setMessages(prev => [...prev, {
                     role: "assistant",
                     content: `🎯 **Tu perfil: ${data.profile}**\n\n${data.explanation}\n\n📌 **Recomendaciones:**\n${data.recommendations}\n\n⚠️ *Este análisis es educativo y no constituye asesoría financiera oficial.*`,
@@ -669,7 +701,38 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                         </button>
                     </div>
                 )}
-                <div style={{ display: "flex", gap: 10, maxWidth: 800, margin: "0 auto" }}>
+                <div style={{ display: "flex", gap: 8, maxWidth: 800, margin: "0 auto", alignItems: "center" }}>
+                    {/* Mic button */}
+                    <button
+                        title="Entrada de voz (próximamente)"
+                        style={{
+                            flexShrink: 0, width: 38, height: 38,
+                            background: "transparent",
+                            border: "1px solid var(--border)",
+                            borderRadius: 8,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            cursor: "pointer", color: "var(--text-muted)",
+                            transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.color = "#a29bfe";
+                            e.currentTarget.style.borderColor = "rgba(162,155,254,0.5)";
+                            e.currentTarget.style.background = "rgba(162,155,254,0.08)";
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.color = "var(--text-muted)";
+                            e.currentTarget.style.borderColor = "var(--border)";
+                            e.currentTarget.style.background = "transparent";
+                        }}
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                            <line x1="8" y1="23" x2="16" y2="23" />
+                        </svg>
+                    </button>
+
                     <input
                         className="input-field"
                         placeholder={riskMode ? "Responde con a), b) o c)..." : "Pregúntale algo a Santi..."}
@@ -677,12 +740,17 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && sendMessage()}
                     />
-                    <button className="btn-primary" onClick={() => sendMessage()} disabled={isLoading} style={{ flexShrink: 0, padding: "0 18px" }}>
+                    <button className="btn-primary" onClick={() => sendMessage()} disabled={isLoading} style={{ flexShrink: 0, padding: "0 18px", height: 38 }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                         </svg>
                     </button>
                 </div>
+
+                {/* Global disclaimer — shown once, not in each bubble */}
+                <p style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", opacity: 0.5, marginTop: 8, maxWidth: 800, margin: "8px auto 0" }}>
+                    ⚠️ Solo uso educativo · No constituye asesoría financiera oficial · TRM ~${TRM_COP.toLocaleString("es-CO")} COP/USD
+                </p>
             </div>
         </div>
     );
