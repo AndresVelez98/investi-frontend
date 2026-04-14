@@ -27,7 +27,7 @@ function useTheme() {
 }
 
 const API = "https://investi-backend-75t5.onrender.com";
-const TRM_COP = 4350; // TRM actualizada — actualizar periódicamente
+const TRM_FALLBACK = 3588;
 
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
@@ -73,11 +73,11 @@ function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }
 
 // ─── Market Widget ────────────────────────────────────────────────────────────
 
-function MarketWidget({ data }: { data: MarketData }) {
+function MarketWidget({ data, trm = TRM_FALLBACK }: { data: MarketData; trm?: number }) {
     const [prices, setPrices] = useState<number[]>([]);
     const isPositive = !data.change?.startsWith("-");
     const priceNum = parseFloat((data.price || "0").replace(/,/g, ""));
-    const priceCOP = isNaN(priceNum) ? null : Math.round(priceNum * TRM_COP).toLocaleString("es-CO");
+    const priceCOP = isNaN(priceNum) ? null : Math.round(priceNum * trm).toLocaleString("es-CO");
 
     useEffect(() => {
         if (!data.ticker) return;
@@ -118,7 +118,7 @@ const ASSET_OPTIONS = [
     { label: "Nasdaq 100 (QQQ)", ticker: "QQQ" },
 ];
 
-function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Profile }) {
+function CalculatorWidget({ data, profile, trm = TRM_FALLBACK }: { data: CalculatorData; profile: Profile; trm?: number }) {
     const [ticker, setTicker] = useState("SPY");
     const [amountCOP, setAmountCOP] = useState(data.amount_cop || 500000);
     const [amountInput, setAmountInput] = useState((data.amount_cop || 500000).toLocaleString("es-CO"));
@@ -134,7 +134,7 @@ function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Pr
             if (amountCOP < 1000) return;
             setLoading(true);
             try {
-                const amountUSD = amountCOP / TRM_COP;
+                const amountUSD = amountCOP / trm;
                 const res = await fetch(`${API}/api/calculate`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -162,9 +162,9 @@ function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Pr
         const breakdown = apiResult.monthly_breakdown as { month: number; value: number }[];
         const atMonth = breakdown.find(b => b.month === months) || breakdown[breakdown.length - 1];
         const projectedUSD = atMonth.value;
-        displayValue = Math.round(projectedUSD * TRM_COP);
+        displayValue = Math.round(projectedUSD * trm);
         displayGainPct = ((projectedUSD - apiResult.initial_amount) / apiResult.initial_amount) * 100;
-        chartPoints = breakdown.map(b => b.value * TRM_COP);
+        chartPoints = breakdown.map(b => b.value * trm);
         dataPeriod = apiResult.data_period || "";
         assetName = apiResult.asset_name || assetName;
     } else {
@@ -176,7 +176,7 @@ function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Pr
     }
 
     const gain = displayValue - amountCOP;
-    const displayUSD = Math.round(displayValue / TRM_COP);
+    const displayUSD = Math.round(displayValue / trm);
     const positive = displayGainPct >= 0;
 
     // SVG area chart
@@ -286,7 +286,7 @@ function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Pr
                 <div>
                     <div style={{ fontSize: 9, color: "rgba(160,160,192,0.6)", marginBottom: 1 }}>Invertido</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>${amountCOP.toLocaleString("es-CO")}</div>
-                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.5)" }}>≈ ${Math.round(amountCOP / TRM_COP).toLocaleString("en-US")} USD</div>
+                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.5)" }}>≈ ${Math.round(amountCOP / trm).toLocaleString("en-US")} USD</div>
                 </div>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 10, color: "rgba(160,160,192,0.6)" }}>en {months} meses</div>
@@ -419,9 +419,29 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         if (userName) setStored("userName", userName);
     }, []);
 
-    useTheme(); // applies stored theme on mount
+    useTheme();
+    const [isMobile, setIsMobile] = useState(false);
+    const [trm, setTrm] = useState(TRM_FALLBACK);
     const [showScrollTop, setShowScrollTop] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+    // Detect mobile viewport
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
+
+    // Fetch real TRM on mount
+    useEffect(() => {
+        fetch(`${API}/api/trm`)
+            .then(r => r.json())
+            .then(d => { if (d.trm > 1000) setTrm(d.trm); })
+            .catch(() => {});
+    }, []);
 
     const [profile, setProfile] = useState<Profile>(storedProfile as Profile);
     const [messages, setMessages] = useState<Message[]>([{
@@ -449,6 +469,33 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         messagesContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     };
 
+    // ── Voice input (Web Speech API) ──────────────────────────────────────────
+    const toggleVoice = useCallback(() => {
+        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SR) {
+            alert("Tu navegador no soporta entrada de voz. Usa Chrome o Safari.");
+            return;
+        }
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+        const recognition = new SR();
+        recognition.lang = "es-CO";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+        recognition.onresult = (e: any) => {
+            const transcript: string = e.results[0][0].transcript;
+            setInput(prev => (prev ? prev + " " : "") + transcript);
+        };
+        recognitionRef.current = recognition;
+        recognition.start();
+    }, [isListening]);
+
     useEffect(() => {
         if (searchParams.get("mode") === "test") startRiskTest();
     }, []);
@@ -466,7 +513,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         setMessages(prev => [...prev, {
             role: "assistant",
             content: "Ajusta el monto, el activo y el plazo — te muestro la proyección con datos históricos reales 👇",
-            calculatorData: { amount_cop: 500000, amount_usd: Math.round(500000 / TRM_COP) },
+            calculatorData: { amount_cop: 500000, amount_usd: Math.round(500000 / trm) },
         }]);
         setSuggestions(SUGGESTIONS.afterCalculator);
     };
@@ -605,13 +652,13 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             )}
 
             {/* Messages */}
-            <div ref={messagesContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+            <div ref={messagesContainerRef} onScroll={handleScroll} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 12px" : "20px 24px", display: "flex", flexDirection: "column", gap: isMobile ? 10 : 14, position: "relative", minHeight: 0 }}>
                 {messages.map((msg, idx) => (
                     <div key={idx} className="animate-fade-in" style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
                         {msg.role === "assistant" && <SantiAvatar size={28} />}
                         <div style={{ maxWidth: "76%", padding: "11px 15px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "4px 18px 18px 18px", background: msg.role === "user" ? "linear-gradient(135deg, var(--accent), #6b5ce7)" : "var(--bg-card)", border: msg.role === "user" ? "none" : "1px solid var(--border)", fontSize: 14 }}>
-                            {msg.marketData?.price && <MarketWidget data={msg.marketData} />}
-                            {msg.calculatorData && <CalculatorWidget data={msg.calculatorData} profile={profile} />}
+                            {msg.marketData?.price && <MarketWidget data={msg.marketData} trm={trm} />}
+                            {msg.calculatorData && <CalculatorWidget data={msg.calculatorData} profile={profile} trm={trm} />}
                             <MarkdownText text={msg.content} />
                         </div>
                     </div>
@@ -657,9 +704,9 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
 
             {/* Quick replies */}
             {suggestions.length > 0 && !isLoading && (
-                <div style={{ padding: "0 24px 10px", display: "flex", gap: 7, flexWrap: "wrap", flexShrink: 0 }}>
+                <div style={{ padding: isMobile ? "0 10px 8px" : "0 24px 10px", display: "flex", gap: isMobile ? 5 : 7, flexWrap: "wrap", flexShrink: 0 }}>
                     {suggestions.map((s, i) => (
-                        <button key={i} onClick={() => sendMessage(s)} style={{ padding: "5px 13px", borderRadius: 20, border: "1px solid var(--border-bright)", background: "rgba(108,92,231,0.08)", color: "var(--text-secondary)", fontSize: 12, cursor: "pointer", transition: "all 0.15s ease", backdropFilter: "blur(4px)", whiteSpace: "nowrap" }}
+                        <button key={i} onClick={() => sendMessage(s)} style={{ padding: isMobile ? "4px 9px" : "5px 13px", borderRadius: 20, border: "1px solid var(--border-bright)", background: "rgba(108,92,231,0.08)", color: "var(--text-secondary)", fontSize: isMobile ? 11 : 12, cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap" }}
                             onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent)"; el.style.background = "rgba(108,92,231,0.18)"; }}
                             onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-bright)"; el.style.color = "var(--text-secondary)"; el.style.background = "rgba(108,92,231,0.08)"; }}>
                             {s}
@@ -669,18 +716,24 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             )}
 
             {/* Input */}
-            <div style={{ padding: "10px 24px 16px", borderTop: "1px solid var(--border)", background: "var(--bg-secondary)", flexShrink: 0 }}>
+            <div style={{
+                padding: isMobile ? "8px 10px 10px" : "10px 24px 14px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg-secondary)",
+                flexShrink: 0,
+                paddingBottom: isMobile ? "max(10px, env(safe-area-inset-bottom))" : "14px",
+            }}>
                 {/* Simulate button row */}
                 {!riskMode && (
-                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8, maxWidth: 800, margin: "0 auto 8px" }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6, maxWidth: 800, margin: "0 auto 6px" }}>
                         <button
                             onClick={openSimulator}
                             style={{
                                 background: "linear-gradient(135deg, rgba(162,155,254,0.15), rgba(108,92,231,0.1))",
                                 border: "1px solid rgba(162,155,254,0.3)",
                                 borderRadius: 20,
-                                padding: "5px 13px",
-                                fontSize: 12,
+                                padding: isMobile ? "4px 10px" : "5px 13px",
+                                fontSize: isMobile ? 11 : 12,
                                 fontWeight: 600,
                                 color: "#a29bfe",
                                 cursor: "pointer",
@@ -688,44 +741,35 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                                 transition: "all 0.2s ease",
                                 whiteSpace: "nowrap",
                             }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.25), rgba(108,92,231,0.2))";
-                                e.currentTarget.style.borderColor = "rgba(162,155,254,0.6)";
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.15), rgba(108,92,231,0.1))";
-                                e.currentTarget.style.borderColor = "rgba(162,155,254,0.3)";
-                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.25), rgba(108,92,231,0.2))"; e.currentTarget.style.borderColor = "rgba(162,155,254,0.6)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.15), rgba(108,92,231,0.1))"; e.currentTarget.style.borderColor = "rgba(162,155,254,0.3)"; }}
                         >
                             📊 Simular Inversión
                         </button>
                     </div>
                 )}
-                <div style={{ display: "flex", gap: 8, maxWidth: 800, margin: "0 auto", alignItems: "center" }}>
-                    {/* Mic button */}
+
+                <div style={{ display: "flex", gap: 6, maxWidth: 800, margin: "0 auto", alignItems: "center" }}>
+                    {/* Mic button — functional via Web Speech API */}
                     <button
-                        title="Entrada de voz (próximamente)"
+                        onClick={toggleVoice}
+                        title={isListening ? "Escuchando... clic para detener" : "Hablar con Santi"}
                         style={{
-                            flexShrink: 0, width: 38, height: 38,
-                            background: "transparent",
-                            border: "1px solid var(--border)",
+                            flexShrink: 0,
+                            width: 36, height: 36,
+                            background: isListening ? "rgba(240,81,106,0.12)" : "transparent",
+                            border: `1px solid ${isListening ? "var(--red)" : "var(--border)"}`,
                             borderRadius: 8,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            cursor: "pointer", color: "var(--text-muted)",
+                            cursor: "pointer",
+                            color: isListening ? "var(--red)" : "var(--text-muted)",
                             transition: "all 0.2s ease",
+                            animation: isListening ? "pulse-dot 1s ease infinite" : "none",
                         }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.color = "#a29bfe";
-                            e.currentTarget.style.borderColor = "rgba(162,155,254,0.5)";
-                            e.currentTarget.style.background = "rgba(162,155,254,0.08)";
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.color = "var(--text-muted)";
-                            e.currentTarget.style.borderColor = "var(--border)";
-                            e.currentTarget.style.background = "transparent";
-                        }}
+                        onMouseEnter={e => { if (!isListening) { e.currentTarget.style.color = "#a29bfe"; e.currentTarget.style.borderColor = "rgba(162,155,254,0.5)"; e.currentTarget.style.background = "rgba(162,155,254,0.08)"; } }}
+                        onMouseLeave={e => { if (!isListening) { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.background = "transparent"; } }}
                     >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                             <line x1="12" y1="19" x2="12" y2="23" />
@@ -735,21 +779,22 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
 
                     <input
                         className="input-field"
-                        placeholder={riskMode ? "Responde con a), b) o c)..." : "Pregúntale algo a Santi..."}
+                        placeholder={isListening ? "Escuchando..." : riskMode ? "Responde con a), b) o c)..." : "Pregúntale algo a Santi..."}
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && sendMessage()}
+                        onKeyDown={e => e.key === "Enter" && !isListening && sendMessage()}
+                        style={{ fontSize: isMobile ? 14 : undefined }}
                     />
-                    <button className="btn-primary" onClick={() => sendMessage()} disabled={isLoading} style={{ flexShrink: 0, padding: "0 18px", height: 38 }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <button className="btn-primary" onClick={() => sendMessage()} disabled={isLoading || isListening} style={{ flexShrink: 0, padding: "0 14px", height: 36 }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                         </svg>
                     </button>
                 </div>
 
-                {/* Global disclaimer — shown once, not in each bubble */}
-                <p style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", opacity: 0.5, marginTop: 8, maxWidth: 800, margin: "8px auto 0" }}>
-                    ⚠️ Solo uso educativo · No constituye asesoría financiera oficial · TRM ~${TRM_COP.toLocaleString("es-CO")} COP/USD
+                {/* Disclaimer — compact, single line */}
+                <p style={{ textAlign: "center", fontSize: 9, color: "var(--text-muted)", opacity: 0.45, margin: "5px auto 0", maxWidth: 800 }}>
+                    ⚠️ Solo uso educativo · No asesoría financiera oficial · TRM ~${trm.toLocaleString("es-CO")}
                 </p>
             </div>
         </div>
