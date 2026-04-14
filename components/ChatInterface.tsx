@@ -252,7 +252,7 @@ export default function ChatInterface() {
     const storedProfile = (typeof window !== "undefined" ? sessionStorage.getItem("profile") : null) || "Moderado";
     const userName = (typeof window !== "undefined" ? sessionStorage.getItem("userName") : null) || "";
 
-    const { theme, toggle: toggleTheme } = useTheme();
+    useTheme(); // applies stored theme on mount
     const [showScrollTop, setShowScrollTop] = useState(false);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -380,15 +380,6 @@ export default function ChatInterface() {
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
                     {!riskMode && <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>🎯 Test de Riesgo</button>}
-                    <button
-                        onClick={toggleTheme}
-                        title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
-                        style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, transition: "all 0.2s ease", flexShrink: 0 }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
-                    >
-                        {theme === "dark" ? "☀️" : "🌙"}
-                    </button>
                 </div>
             </header>
 

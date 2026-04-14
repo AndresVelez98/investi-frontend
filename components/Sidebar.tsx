@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
     {
@@ -47,7 +47,15 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [collapsed, setCollapsed] = useState(false);
+
+    const handleSalir = () => {
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("userName");
+        sessionStorage.removeItem("profile");
+        router.push("/");
+    };
 
     return (
         <aside
@@ -127,13 +135,60 @@ export default function Sidebar() {
             </nav>
 
             {/* Footer */}
-            {!collapsed && (
-                <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
-                    <p style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5 }}>
+            <div style={{ padding: collapsed ? "12px 8px" : "12px 8px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
+                {/* Settings link */}
+                <Link
+                    href="/settings"
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: collapsed ? "10px 0" : "10px 12px",
+                        borderRadius: "var(--radius-sm)",
+                        textDecoration: "none",
+                        color: pathname === "/settings" ? "var(--accent)" : "var(--text-secondary)",
+                        background: pathname === "/settings" ? "var(--accent-glow)" : "transparent",
+                        fontSize: 14, fontWeight: pathname === "/settings" ? 600 : 400,
+                        transition: "all 0.15s ease",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    {!collapsed && <span>Configuración</span>}
+                </Link>
+
+                {/* Salir button */}
+                <button
+                    onClick={handleSalir}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: collapsed ? "10px 0" : "10px 12px",
+                        borderRadius: "var(--radius-sm)",
+                        background: "transparent", border: "none", cursor: "pointer",
+                        color: "var(--text-muted)", fontSize: 14, fontWeight: 400,
+                        transition: "all 0.15s ease",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        whiteSpace: "nowrap", width: "100%",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--red)"; e.currentTarget.style.background = "var(--red-bg)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "transparent"; }}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    {!collapsed && <span>Salir</span>}
+                </button>
+
+                {!collapsed && (
+                    <p style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.5, padding: "8px 12px 0" }}>
                         ⚠️ Solo uso educativo.<br />No es asesoría financiera oficial.
                     </p>
-                </div>
-            )}
+                )}
+            </div>
         </aside>
     );
 }

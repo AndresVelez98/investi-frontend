@@ -1,6 +1,28 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
+function useTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("investi_theme") as "dark" | "light" | null;
+    const initial = saved || "dark";
+    setTheme(initial);
+    document.documentElement.setAttribute("data-theme", initial);
+  }, []);
+
+  const toggle = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("investi_theme", next);
+      document.documentElement.setAttribute("data-theme", next);
+      return next;
+    });
+  }, []);
+
+  return { theme, toggle };
+}
 
 type Step = "auth" | "register-info" | "profile";
 type AuthMode = "login" | "register";
@@ -34,6 +56,7 @@ const PROFILES: { key: Profile; emoji: string; title: string; desc: string; colo
 
 export default function ProfileSelector() {
   const router = useRouter();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [step, setStep] = useState<Step>("auth");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
@@ -148,7 +171,24 @@ export default function ProfileSelector() {
       justifyContent: "center",
       padding: 24,
       background: "radial-gradient(ellipse at 60% 10%, rgba(79,126,248,0.08) 0%, transparent 60%), var(--bg-primary)",
+      position: "relative",
     }}>
+      {/* Theme toggle — top right */}
+      <button
+        onClick={toggleTheme}
+        title={theme === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro"}
+        style={{
+          position: "fixed", top: 20, right: 20,
+          background: "var(--bg-card)", border: "1px solid var(--border)",
+          borderRadius: 10, width: 40, height: 40,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", fontSize: 18, zIndex: 100,
+          boxShadow: "var(--shadow-card)", transition: "all 0.2s ease",
+        }}
+      >
+        {theme === "dark" ? "☀️" : "🌙"}
+      </button>
+
       <div style={{ maxWidth: 520, width: "100%" }}>
 
         {/* Header */}

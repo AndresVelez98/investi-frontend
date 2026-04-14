@@ -14,6 +14,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <head>
+        {/* Apply theme before paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var t = localStorage.getItem('investi_theme') || 'dark';
+              document.documentElement.setAttribute('data-theme', t);
+            } catch(e) {}
+          })();
+        `}} />
+      </head>
       <body>{children}</body>
     </html>
   );
