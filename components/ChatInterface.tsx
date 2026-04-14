@@ -105,76 +105,210 @@ function MarketWidget({ data }: { data: MarketData }) {
     );
 }
 
-// ─── Calculator Widget ────────────────────────────────────────────────────────
+// ─── Investment Calculator Card ───────────────────────────────────────────────
 
-const ANNUAL_RETURNS: Record<Profile, number> = {
-    Conservador: 0.06,
-    Moderado: 0.10,
-    Agresivo: 0.15,
-};
+const ASSET_OPTIONS = [
+    { label: "S&P 500 (SPY)", ticker: "SPY" },
+    { label: "Bitcoin (BTC)", ticker: "BTC-USD" },
+    { label: "Apple (AAPL)", ticker: "AAPL" },
+    { label: "NVIDIA (NVDA)", ticker: "NVDA" },
+    { label: "Tesla (TSLA)", ticker: "TSLA" },
+    { label: "Ethereum (ETH)", ticker: "ETH-USD" },
+    { label: "Microsoft (MSFT)", ticker: "MSFT" },
+    { label: "Nasdaq 100 (QQQ)", ticker: "QQQ" },
+];
 
 function CalculatorWidget({ data, profile }: { data: CalculatorData; profile: Profile }) {
+    const [ticker, setTicker] = useState("SPY");
+    const [amountCOP, setAmountCOP] = useState(data.amount_cop || 500000);
+    const [amountInput, setAmountInput] = useState((data.amount_cop || 500000).toLocaleString("es-CO"));
     const [months, setMonths] = useState(12);
-    const annualReturn = ANNUAL_RETURNS[profile] || 0.10;
-    const monthlyReturn = annualReturn / 12;
-    const initial = data.amount_cop;
-    const projected = initial * Math.pow(1 + monthlyReturn, months);
-    const gain = projected - initial;
-    const gainPct = ((gain / initial) * 100).toFixed(1);
+    const [apiResult, setApiResult] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // SVG line chart
-    const points = Array.from({ length: months + 1 }, (_, i) =>
-        initial * Math.pow(1 + monthlyReturn, i)
-    );
-    const minV = initial;
-    const maxV = projected;
+    // Call /api/calculate when ticker or amount changes (debounced 600ms)
+    useEffect(() => {
+        if (fetchTimer.current) clearTimeout(fetchTimer.current);
+        fetchTimer.current = setTimeout(async () => {
+            if (amountCOP < 1000) return;
+            setLoading(true);
+            try {
+                const amountUSD = amountCOP / TRM_COP;
+                const res = await fetch(`${API}/api/calculate`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticker, amount: amountUSD, months: 48 }),
+                });
+                const json = await res.json();
+                if (!json.error) setApiResult(json);
+            } catch { /* ignore */ } finally { setLoading(false); }
+        }, 600);
+    }, [ticker, amountCOP]);
+
+    // Derive display values from API result or fallback profile rates
+    const FALLBACK_MONTHLY: Record<Profile, number> = { Conservador: 0.005, Moderado: 0.0083, Agresivo: 0.0125 };
+    const fallbackRate = FALLBACK_MONTHLY[profile] || 0.0083;
+
+    let displayValue: number;
+    let displayGainPct: number;
+    let chartPoints: number[];
+    let avgMonthly: number;
+    let dataPeriod = "";
+    let assetName = ASSET_OPTIONS.find(a => a.ticker === ticker)?.label || ticker;
+
+    if (apiResult?.monthly_breakdown?.length) {
+        avgMonthly = apiResult.avg_monthly_return_pct / 100;
+        const breakdown = apiResult.monthly_breakdown as { month: number; value: number }[];
+        const atMonth = breakdown.find(b => b.month === months) || breakdown[breakdown.length - 1];
+        const projectedUSD = atMonth.value;
+        displayValue = Math.round(projectedUSD * TRM_COP);
+        displayGainPct = ((projectedUSD - apiResult.initial_amount) / apiResult.initial_amount) * 100;
+        chartPoints = breakdown.map(b => b.value * TRM_COP);
+        dataPeriod = apiResult.data_period || "";
+        assetName = apiResult.asset_name || assetName;
+    } else {
+        chartPoints = Array.from({ length: 48 }, (_, i) => amountCOP * Math.pow(1 + fallbackRate, i + 1));
+        const projectedCOP = amountCOP * Math.pow(1 + fallbackRate, months);
+        displayValue = Math.round(projectedCOP);
+        displayGainPct = ((projectedCOP - amountCOP) / amountCOP) * 100;
+        avgMonthly = fallbackRate;
+    }
+
+    const gain = displayValue - amountCOP;
+    const displayUSD = Math.round(displayValue / TRM_COP);
+    const positive = displayGainPct >= 0;
+
+    // SVG area chart
+    const W = 280, H = 64;
+    const visiblePoints = chartPoints.slice(0, months);
+    const allPts = [amountCOP, ...visiblePoints];
+    const minV = Math.min(...allPts);
+    const maxV = Math.max(...allPts);
     const rangeV = maxV - minV || 1;
-    const W = 240, H = 60;
-    const svgPts = points.map((v, i) => {
-        const x = ((i / months) * W).toFixed(1);
-        const y = (H - ((v - minV) / rangeV) * (H - 8) - 4).toFixed(1);
+    const toSVG = (v: number, i: number, total: number) => {
+        const x = ((i / (total - 1)) * W).toFixed(1);
+        const y = (H - 4 - ((v - minV) / rangeV) * (H - 12)).toFixed(1);
         return `${x},${y}`;
-    }).join(" ");
+    };
+    const linePts = allPts.map((v, i) => toSVG(v, i, allPts.length)).join(" ");
+    const areaPath = `M 0,${H} ` + allPts.map((v, i) => toSVG(v, i, allPts.length)).join(" L ") + ` L ${W},${H} Z`;
+    const lastX = W, lastY = parseFloat(toSVG(allPts[allPts.length - 1], allPts.length - 1, allPts.length).split(",")[1]);
 
     return (
-        <div style={{ background: "linear-gradient(135deg, #1a1a3e, #16213e)", border: "1px solid #4a4a8a", borderRadius: 12, padding: "14px 16px", marginBottom: 10, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#a29bfe", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                📊 Proyección de Inversión
+        <div style={{
+            background: "linear-gradient(145deg, rgba(26,26,62,0.95), rgba(15,17,23,0.98))",
+            border: "1px solid rgba(162,155,254,0.25)",
+            borderRadius: 14,
+            padding: "16px",
+            marginBottom: 10,
+            minWidth: 0,
+            backdropFilter: "blur(12px)",
+        }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#a29bfe", display: "flex", alignItems: "center", gap: 6 }}>
+                    📊 Simulador de Inversión
+                </div>
+                {loading && <div style={{ fontSize: 10, color: "#a29bfe", animation: "pulse-dot 1s infinite" }}>Calculando...</div>}
+                {dataPeriod && !loading && <div style={{ fontSize: 9, color: "rgba(160,160,192,0.6)" }}>{dataPeriod}</div>}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, gap: 8 }}>
+            {/* Controls row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                {/* Amount */}
                 <div>
-                    <div style={{ fontSize: 10, color: "#a0a0c0" }}>Capital inicial</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
-                        ${initial.toLocaleString("es-CO")} COP
-                    </div>
-                    <div style={{ fontSize: 10, color: "#a0a0c0" }}>≈ ${data.amount_usd.toLocaleString("en-US")} USD</div>
+                    <label style={{ fontSize: 9, color: "rgba(160,160,192,0.7)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Monto (COP)
+                    </label>
+                    <input
+                        value={amountInput}
+                        onChange={e => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            const num = parseInt(raw) || 0;
+                            setAmountCOP(num);
+                            setAmountInput(num > 0 ? num.toLocaleString("es-CO") : "");
+                        }}
+                        onBlur={() => setAmountInput(amountCOP > 0 ? amountCOP.toLocaleString("es-CO") : "")}
+                        placeholder="500.000"
+                        style={{
+                            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(162,155,254,0.2)",
+                            borderRadius: 7, color: "#fff", padding: "6px 9px", fontSize: 12,
+                            fontWeight: 600, width: "100%", outline: "none", boxSizing: "border-box",
+                        }}
+                    />
                 </div>
-                <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 10, color: "#a0a0c0" }}>En {months} meses</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#00b894" }}>
-                        ${Math.round(projected).toLocaleString("es-CO")} COP
-                    </div>
-                    <div style={{ fontSize: 10, color: "#00b894" }}>+{gainPct}% · +${Math.round(gain).toLocaleString("es-CO")}</div>
+                {/* Asset */}
+                <div>
+                    <label style={{ fontSize: 9, color: "rgba(160,160,192,0.7)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Activo
+                    </label>
+                    <select
+                        value={ticker}
+                        onChange={e => setTicker(e.target.value)}
+                        style={{
+                            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(162,155,254,0.2)",
+                            borderRadius: 7, color: "#fff", padding: "6px 9px", fontSize: 11,
+                            width: "100%", outline: "none", cursor: "pointer",
+                        }}
+                    >
+                        {ASSET_OPTIONS.map(a => <option key={a.ticker} value={a.ticker} style={{ background: "#16213e" }}>{a.label}</option>)}
+                    </select>
                 </div>
             </div>
 
-            <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", marginBottom: 10 }}>
-                <polyline points={svgPts} fill="none" stroke="#a29bfe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx={W} cy={(H - ((projected - minV) / rangeV) * (H - 8) - 4).toFixed(1)} r="3" fill="#00b894" />
+            {/* Area Chart */}
+            <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", marginBottom: 4, overflow: "visible" }}>
+                <defs>
+                    <linearGradient id="calcArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={positive ? "#a29bfe" : "#f0516a"} stopOpacity="0.35" />
+                        <stop offset="100%" stopColor={positive ? "#a29bfe" : "#f0516a"} stopOpacity="0.02" />
+                    </linearGradient>
+                </defs>
+                <path d={areaPath} fill="url(#calcArea)" />
+                <polyline points={linePts} fill="none" stroke={positive ? "#a29bfe" : "#f0516a"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx={lastX} cy={lastY} r="3.5" fill={positive ? "#00b894" : "#f0516a"} />
             </svg>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 11, color: "#a0a0c0", whiteSpace: "nowrap" }}>1 mes</span>
+            {/* Months slider */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 10, color: "rgba(160,160,192,0.6)", whiteSpace: "nowrap" }}>1m</span>
                 <input
-                    type="range" min={1} max={60} value={months}
+                    type="range" min={1} max={48} value={months}
                     onChange={e => setMonths(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: "#a29bfe", cursor: "pointer" }}
+                    style={{ flex: 1, accentColor: "#a29bfe", cursor: "pointer", height: 3 }}
                 />
-                <span style={{ fontSize: 11, color: "#a0a0c0", whiteSpace: "nowrap" }}>60 meses</span>
+                <span style={{ fontSize: 10, color: "rgba(160,160,192,0.6)", whiteSpace: "nowrap" }}>48m</span>
             </div>
-            <div style={{ textAlign: "center", fontSize: 11, color: "#a0a0c0", marginTop: 4 }}>
-                Rendimiento anual estimado ({profile}): {(annualReturn * 100).toFixed(0)}%
+
+            {/* Results */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>
+                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.6)", marginBottom: 1 }}>Invertido</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>${amountCOP.toLocaleString("es-CO")}</div>
+                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.5)" }}>≈ ${Math.round(amountCOP / TRM_COP).toLocaleString("en-US")} USD</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 10, color: "rgba(160,160,192,0.6)" }}>en {months} meses</div>
+                    <div style={{ fontSize: 11, color: "#a29bfe" }}>{assetName.split("(")[0].trim()}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.6)", marginBottom: 1 }}>Proyectado</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: positive ? "#00b894" : "#f0516a" }}>
+                        ${displayValue.toLocaleString("es-CO")}
+                    </div>
+                    <div style={{ fontSize: 9, color: positive ? "#00b894" : "#f0516a" }}>
+                        {positive ? "+" : ""}{displayGainPct.toFixed(1)}% · {positive ? "+" : ""}{gain.toLocaleString("es-CO")} COP
+                    </div>
+                    <div style={{ fontSize: 9, color: "rgba(160,160,192,0.5)" }}>≈ ${displayUSD.toLocaleString("en-US")} USD</div>
+                </div>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 9, color: "rgba(160,160,192,0.4)", lineHeight: 1.4 }}>
+                {apiResult
+                    ? `Basado en retorno histórico promedio de ${assetName}: ${(avgMonthly * 100).toFixed(2)}%/mes. El pasado no garantiza el futuro.`
+                    : `Estimación orientativa perfil ${profile}. Selecciona activo para datos reales.`
+                }
             </div>
         </div>
     );
@@ -294,6 +428,15 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             { role: "assistant", content: "Perfecto, 5 preguntas rápidas para descubrir tu perfil. No hay respuestas correctas — solo sé honesto 🎯" },
             { role: "assistant", content: `**Pregunta 1 de 5:**\n${RISK_QUESTIONS_PREVIEW[0]}\n\n*Responde con a), b) o c)*` },
         ]);
+    };
+
+    const openSimulator = () => {
+        setMessages(prev => [...prev, {
+            role: "assistant",
+            content: "Ajusta el monto, el activo y el plazo — te muestro la proyección con datos históricos reales 👇",
+            calculatorData: { amount_cop: 500000, amount_usd: Math.round(500000 / TRM_COP) },
+        }]);
+        setSuggestions(SUGGESTIONS.afterCalculator);
     };
 
     const handleRiskAnswer = async (answer: string) => {
@@ -495,6 +638,37 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
 
             {/* Input */}
             <div style={{ padding: "10px 24px 16px", borderTop: "1px solid var(--border)", background: "var(--bg-secondary)", flexShrink: 0 }}>
+                {/* Simulate button row */}
+                {!riskMode && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8, maxWidth: 800, margin: "0 auto 8px" }}>
+                        <button
+                            onClick={openSimulator}
+                            style={{
+                                background: "linear-gradient(135deg, rgba(162,155,254,0.15), rgba(108,92,231,0.1))",
+                                border: "1px solid rgba(162,155,254,0.3)",
+                                borderRadius: 20,
+                                padding: "5px 13px",
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "#a29bfe",
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", gap: 5,
+                                transition: "all 0.2s ease",
+                                whiteSpace: "nowrap",
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.25), rgba(108,92,231,0.2))";
+                                e.currentTarget.style.borderColor = "rgba(162,155,254,0.6)";
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = "linear-gradient(135deg, rgba(162,155,254,0.15), rgba(108,92,231,0.1))";
+                                e.currentTarget.style.borderColor = "rgba(162,155,254,0.3)";
+                            }}
+                        >
+                            📊 Simular Inversión
+                        </button>
+                    </div>
+                )}
                 <div style={{ display: "flex", gap: 10, maxWidth: 800, margin: "0 auto" }}>
                     <input
                         className="input-field"
