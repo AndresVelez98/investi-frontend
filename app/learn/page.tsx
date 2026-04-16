@@ -1,5 +1,6 @@
 "use client";
 import Sidebar from "../../components/Sidebar";
+import BottomNav from "../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -164,8 +165,8 @@ export default function LearnPage() {
     return (
         <div className="app-layout">
             <Sidebar />
-            <main className="main-content">
-                <div style={{ padding: 32, maxWidth: 860, margin: "0 auto" }}>
+            <main className="main-content" style={{ overflowX: "hidden" }}>
+                <div style={{ padding: "20px 16px 0", maxWidth: 860, margin: "0 auto" }} className="md:p-8 md:pt-8">
 
                     {/* Header */}
                     <div style={{ marginBottom: 8 }}>
@@ -247,6 +248,7 @@ export default function LearnPage() {
                     </div>
                 </div>
             </main>
+            <BottomNav />
         </div>
     );
 }

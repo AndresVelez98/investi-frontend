@@ -2,6 +2,7 @@
 import Sidebar from "../../components/Sidebar";
 import Dashboard from "../../components/Dashboard";
 import FloatingChatWidget from "../../components/FloatingChatWidget";
+import BottomNav from "../../components/BottomNav";
 
 export default function DashboardPage() {
     return (
@@ -11,6 +12,7 @@ export default function DashboardPage() {
                 <Dashboard />
             </main>
             <FloatingChatWidget />
+            <BottomNav />
         </div>
     );
 }

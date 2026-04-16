@@ -56,6 +56,7 @@ export default function Sidebar() {
 
     return (
         <aside
+            className="sidebar"
             style={{
                 width: collapsed ? 64 : 220,
                 background: "var(--bg-secondary)",

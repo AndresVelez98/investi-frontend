@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 
 function useTheme() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -141,6 +142,7 @@ export default function SettingsPage() {
           </p>
         </section>
       </main>
+      <BottomNav />
     </div>
   );
 }
