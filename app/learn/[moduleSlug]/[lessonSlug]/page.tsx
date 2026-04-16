@@ -1,5 +1,6 @@
 "use client";
 import Sidebar from "../../../../components/Sidebar";
+import BottomNav from "../../../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
@@ -297,32 +298,41 @@ export default function LessonPage() {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<"content" | "quiz" | "results">("content");
     const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+    const [trm, setTrm] = useState(3588);
 
     useEffect(() => {
         const token = sessionStorage.getItem("token");
         if (!token) { router.push("/"); return; }
 
-        fetch(`${API}/api/education/lessons/${lessonSlug}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(r => {
-                if (!r.ok) throw new Error();
-                return r.json();
+        Promise.all([
+            fetch(`${API}/api/education/lessons/${lessonSlug}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            }).then(r => { if (!r.ok) throw new Error(); return r.json(); }),
+            fetch(`${API}/api/trm`).then(r => r.json()).catch(() => ({ trm: 3588 })),
+        ])
+            .then(([lessonData, trmData]) => {
+                setLesson(lessonData);
+                if (trmData?.trm > 1000) setTrm(trmData.trm);
             })
-            .then(setLesson)
             .catch(() => router.push("/learn"))
             .finally(() => setLoading(false));
     }, [lessonSlug, router]);
+
+    // Replace TRM placeholder so lesson examples stay current
+    const injectTrm = (text: string) =>
+        text.replace(/\{TRM\}/g, trm.toLocaleString("es-CO"))
+            .replace(/\$3[,.]?5\d\d/g, `$${trm.toLocaleString("es-CO")}`);
 
     if (loading) {
         return (
             <div className="app-layout">
                 <Sidebar />
                 <main className="main-content">
-                    <div style={{ padding: 32, maxWidth: 780, margin: "0 auto" }}>
+                    <div style={{ padding: "20px 16px 88px", maxWidth: 780, margin: "0 auto" }}>
                         <div className="glass-card loading-shimmer" style={{ height: 400 }} />
                     </div>
                 </main>
+                <BottomNav />
             </div>
         );
     }
@@ -333,7 +343,7 @@ export default function LessonPage() {
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                <div style={{ padding: 32, maxWidth: 780, margin: "0 auto" }}>
+                <div style={{ padding: "20px 16px 88px", maxWidth: 780, margin: "0 auto" }}>
 
                     {/* Navigation */}
                     <button
@@ -349,10 +359,17 @@ export default function LessonPage() {
 
                     {/* Lesson header */}
                     <div style={{ marginBottom: 24 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
                             <span className="badge badge-blue">{lesson.module_title}</span>
                             <span className="badge badge-green">+{lesson.xp_reward} XP</span>
                             {lesson.is_completed && <span className="badge badge-green">Completada ✓</span>}
+                            <span style={{
+                                fontSize: 10, fontWeight: 600, color: "var(--text-muted)",
+                                background: "var(--bg-secondary)", border: "1px solid var(--border)",
+                                borderRadius: 99, padding: "2px 8px",
+                            }}>
+                                TRM ${trm.toLocaleString("es-CO")}
+                            </span>
                         </div>
                         <h1 style={{ fontSize: 24, fontWeight: 800 }}>{lesson.title}</h1>
                     </div>
@@ -392,8 +409,8 @@ export default function LessonPage() {
                         <div>
                             <div
                                 className="glass-card"
-                                style={{ padding: "28px 32px" }}
-                                dangerouslySetInnerHTML={{ __html: renderMarkdown(lesson.content) }}
+                                style={{ padding: "24px 22px" }}
+                                dangerouslySetInnerHTML={{ __html: renderMarkdown(injectTrm(lesson.content)) }}
                             />
 
                             {/* Fun fact */}
@@ -458,6 +475,7 @@ export default function LessonPage() {
                     )}
                 </div>
             </main>
+            <BottomNav />
         </div>
     );
 }

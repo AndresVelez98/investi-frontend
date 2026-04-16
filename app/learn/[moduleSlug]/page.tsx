@@ -1,5 +1,6 @@
 "use client";
 import Sidebar from "../../../components/Sidebar";
+import BottomNav from "../../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
@@ -135,7 +136,7 @@ export default function ModuleLessonsPage() {
         <div className="app-layout">
             <Sidebar />
             <main className="main-content">
-                <div style={{ padding: 32, maxWidth: 780, margin: "0 auto" }}>
+                <div style={{ padding: "20px 16px 88px", maxWidth: 780, margin: "0 auto" }}>
 
                     {/* Back button */}
                     <button
@@ -200,6 +201,7 @@ export default function ModuleLessonsPage() {
                     </div>
                 </div>
             </main>
+            <BottomNav />
         </div>
     );
 }

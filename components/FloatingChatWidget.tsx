@@ -99,16 +99,15 @@ export default function FloatingChatWidget() {
             )}
 
             {/* ── DESKTOP: Mac-style floating window + FAB ── */}
+            {/* Hidden entirely on mobile — BottomNav tab handles chat navigation */}
             <div style={{
                 position: "fixed",
                 bottom: 24,
                 right: 24,
                 zIndex: 1000,
-                display: "flex",
+                display: isMobile ? "none" : "flex",
                 flexDirection: "column",
                 alignItems: "flex-end",
-                // Hide FAB on mobile when chat is open
-                visibility: (isMobile && isOpen) ? "hidden" : "visible",
             }}>
                 {/* Desktop mac window */}
                 {!isMobile && (

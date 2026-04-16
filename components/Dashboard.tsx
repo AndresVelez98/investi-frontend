@@ -242,7 +242,7 @@ export default function Dashboard() {
         })();
 
     return (
-        <div style={{ padding: "20px 16px 8px", maxWidth: 860, margin: "0 auto" }}>
+        <div style={{ padding: "20px 16px 88px", maxWidth: 860, margin: "0 auto" }}>
 
             {/* ── Greeting ── */}
             <div style={{ marginBottom: 20 }}>
