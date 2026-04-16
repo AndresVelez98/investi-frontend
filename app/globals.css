@@ -172,6 +172,10 @@ html, body {
 .badge-red { background: var(--red-bg); color: var(--red); }
 .badge-gold { background: var(--gold-bg); color: var(--gold); }
 
+/* --- Hide scrollbar utility --- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
 /* --- Animations --- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

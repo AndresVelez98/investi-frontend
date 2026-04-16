@@ -425,6 +425,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const inputBeforeVoiceRef = useRef("");
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     // Detect mobile viewport
@@ -469,7 +470,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         messagesContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    // ── Voice input (Web Speech API) ──────────────────────────────────────────
+    // ── Voice input (Web Speech API) — live interim results ──────────────────
     const toggleVoice = useCallback(() => {
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SR) {
@@ -481,20 +482,41 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             setIsListening(false);
             return;
         }
+        // Snapshot current input so we can append to it live
+        inputBeforeVoiceRef.current = input;
+
         const recognition = new SR();
         recognition.lang = "es-CO";
         recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.interimResults = true;   // show text while speaking
+
         recognition.onstart = () => setIsListening(true);
         recognition.onend = () => setIsListening(false);
-        recognition.onerror = () => setIsListening(false);
+        recognition.onerror = () => {
+            setIsListening(false);
+            setInput(inputBeforeVoiceRef.current); // restore on error
+        };
         recognition.onresult = (e: any) => {
-            const transcript: string = e.results[0][0].transcript;
-            setInput(prev => (prev ? prev + " " : "") + transcript);
+            let finalText = "";
+            let interimText = "";
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+                else interimText += e.results[i][0].transcript;
+            }
+            const base = inputBeforeVoiceRef.current;
+            if (finalText) {
+                // Commit final transcript and update the base for the next segment
+                const committed = (base ? base + " " : "") + finalText.trim();
+                setInput(committed);
+                inputBeforeVoiceRef.current = committed;
+            } else if (interimText) {
+                // Show live interim text in the field (not yet committed)
+                setInput((base ? base + " " : "") + interimText);
+            }
         };
         recognitionRef.current = recognition;
         recognition.start();
-    }, [isListening]);
+    }, [isListening, input]);
 
     useEffect(() => {
         if (searchParams.get("mode") === "test") startRiskTest();
@@ -589,55 +611,87 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
     const profileColors: Record<Profile, string> = { Conservador: "badge-green", Moderado: "badge-blue", Agresivo: "badge-gold" };
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", height: mode === "floating" ? "100%" : "100vh" }}>
+        <div style={{
+            display: "flex",
+            flexDirection: "column",
+            height: mode === "floating" ? "100%" : "100dvh",
+            // Full-screen overlay on mobile — covers bottom nav & parent padding
+            ...(mode === "page" && isMobile ? {
+                position: "fixed" as const,
+                top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 600,
+                background: "var(--bg-secondary)",
+            } : {}),
+        }}>
 
             {/* Header — only in page mode */}
             {mode === "page" && (
-            <header style={{ padding: "12px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-secondary)", flexShrink: 0 }}>
+            <header style={{
+                padding: isMobile ? "10px 14px" : "12px 24px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                background: "var(--bg-secondary)", flexShrink: 0,
+            }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <SantiAvatar size={36} />
+                    {/* Back arrow — mobile only */}
+                    {isMobile && (
+                        <button
+                            onClick={() => router.push("/dashboard")}
+                            style={{
+                                width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                                background: "transparent", border: "1px solid var(--border)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", color: "var(--text-secondary)",
+                            }}
+                        >
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+                    )}
+                    <SantiAvatar size={isMobile ? 30 : 36} />
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: 15 }}>Santi</div>
+                        <div style={{ fontWeight: 700, fontSize: isMobile ? 14 : 15 }}>Santi</div>
                         <div style={{ fontSize: 11, color: "#00b894", fontWeight: 500 }}>● En línea · Asesor Financiero IA</div>
                     </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
-                    {!riskMode && <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>🎯 Test de Riesgo</button>}
-                    <button
-                        onClick={() => router.push("/dashboard")}
-                        title="Volver al inicio"
-                        style={{
-                            background: "transparent",
-                            border: "1px solid var(--border)",
-                            borderRadius: 8,
-                            padding: "6px 12px",
-                            display: "flex", alignItems: "center", gap: 6,
-                            cursor: "pointer",
-                            color: "var(--text-muted)",
-                            fontSize: 13, fontWeight: 500,
-                            transition: "all 0.2s ease",
-                            zIndex: 50,
-                        }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.color = "var(--red)";
-                            e.currentTarget.style.borderColor = "var(--red)";
-                            e.currentTarget.style.background = "var(--red-bg)";
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.color = "var(--text-muted)";
-                            e.currentTarget.style.borderColor = "var(--border)";
-                            e.currentTarget.style.background = "transparent";
-                        }}
-                    >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                            <polyline points="16 17 21 12 16 7" />
-                            <line x1="21" y1="12" x2="9" y2="12" />
-                        </svg>
-                        Salir
-                    </button>
-                </div>
+
+                {/* Desktop controls */}
+                {!isMobile && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span className={`badge ${profileColors[profile]}`}>Perfil: {profile}</span>
+                        {!riskMode && (
+                            <button className="btn-ghost" onClick={startRiskTest} style={{ fontSize: 12, padding: "6px 12px" }}>
+                                🎯 Test de Riesgo
+                            </button>
+                        )}
+                        <button
+                            onClick={() => router.push("/dashboard")}
+                            title="Volver al inicio"
+                            style={{
+                                background: "transparent", border: "1px solid var(--border)",
+                                borderRadius: 8, padding: "6px 12px",
+                                display: "flex", alignItems: "center", gap: 6,
+                                cursor: "pointer", color: "var(--text-muted)",
+                                fontSize: 13, fontWeight: 500, transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "var(--red)"; e.currentTarget.style.borderColor = "var(--red)"; e.currentTarget.style.background = "var(--red-bg)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.background = "transparent"; }}
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Salir
+                        </button>
+                    </div>
+                )}
+
+                {/* Mobile: profile badge only */}
+                {isMobile && (
+                    <span className={`badge ${profileColors[profile]}`} style={{ fontSize: 11 }}>
+                        {profile}
+                    </span>
+                )}
             </header>
             )}
 
@@ -702,13 +756,40 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 )}
             </div>
 
-            {/* Quick replies */}
+            {/* Quick replies — horizontal scroll row on mobile */}
             {suggestions.length > 0 && !isLoading && (
-                <div style={{ padding: isMobile ? "0 10px 8px" : "0 24px 10px", display: "flex", gap: isMobile ? 5 : 7, flexWrap: "wrap", flexShrink: 0 }}>
+                <div style={{
+                    padding: isMobile ? "4px 10px 8px" : "0 24px 10px",
+                    display: "flex",
+                    gap: isMobile ? 6 : 7,
+                    flexWrap: isMobile ? "nowrap" : "wrap",
+                    overflowX: isMobile ? "auto" : "visible",
+                    flexShrink: 0,
+                    scrollbarWidth: "none",
+                    // Fade edges on mobile to hint scroll
+                    WebkitMaskImage: isMobile
+                        ? "linear-gradient(to right, transparent 0%, black 8px, black 92%, transparent 100%)"
+                        : undefined,
+                }}>
                     {suggestions.map((s, i) => (
-                        <button key={i} onClick={() => sendMessage(s)} style={{ padding: isMobile ? "4px 9px" : "5px 13px", borderRadius: 20, border: "1px solid var(--border-bright)", background: "rgba(108,92,231,0.08)", color: "var(--text-secondary)", fontSize: isMobile ? 11 : 12, cursor: "pointer", transition: "all 0.15s ease", whiteSpace: "nowrap" }}
+                        <button
+                            key={i}
+                            onClick={() => sendMessage(s)}
+                            style={{
+                                flexShrink: 0,
+                                padding: isMobile ? "5px 11px" : "5px 13px",
+                                borderRadius: 20,
+                                border: "1px solid var(--border-bright)",
+                                background: "rgba(108,92,231,0.08)",
+                                color: "var(--text-secondary)",
+                                fontSize: isMobile ? 12 : 12,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                whiteSpace: "nowrap",
+                            }}
                             onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent)"; el.style.background = "rgba(108,92,231,0.18)"; }}
-                            onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-bright)"; el.style.color = "var(--text-secondary)"; el.style.background = "rgba(108,92,231,0.08)"; }}>
+                            onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-bright)"; el.style.color = "var(--text-secondary)"; el.style.background = "rgba(108,92,231,0.08)"; }}
+                        >
                             {s}
                         </button>
                     ))}
