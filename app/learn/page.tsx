@@ -181,9 +181,9 @@ export default function LearnPage() {
                     {/* Stats Bar */}
                     {stats && (
                         <div style={{
-                            display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+                            display: "grid", gridTemplateColumns: "repeat(2, 1fr)",
                             gap: 12, margin: "24px 0 32px",
-                        }}>
+                        }} className="md:grid-cols-4">
                             <StatCard emoji="⚡" value={stats.total_xp.toLocaleString()} label="XP Total" />
                             <StatCard emoji="📖" value={`${stats.lessons_completed}`} label="Lecciones" />
                             <StatCard emoji="🔥" value={`${stats.current_streak}d`} label="Racha" />
