@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import MarketDetailSheet from "./MarketDetailSheet";
 
 const API = "https://investi-backend-75t5.onrender.com";
 
@@ -207,6 +208,9 @@ export default function Dashboard() {
     const [userName, setUserName] = useState("Inversor");
     const [profile, setProfile] = useState("Moderado");
     const [ctaHover, setCtaHover] = useState(false);
+    const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+    const [displayedAssets, setDisplayedAssets] = useState<Asset[]>([]);
+    const [rowsFade, setRowsFade] = useState(true);
 
     useEffect(() => {
         const name =
@@ -231,15 +235,29 @@ export default function Dashboard() {
 
     const cfg = PROFILE_CONFIG[profile] || PROFILE_CONFIG.Moderado;
 
-    // Pick the 4 featured assets for this profile; fallback to first 4
-    const displayAssets: Asset[] = loading
-        ? []
-        : (() => {
-            const picked = cfg.featured
-                .map(t => assets.find(a => a.ticker === t))
-                .filter(Boolean) as Asset[];
-            return picked.length >= 2 ? picked.slice(0, 4) : assets.slice(0, 4);
-        })();
+    // Initialize with profile-featured assets once data loads
+    useEffect(() => {
+        if (assets.length === 0) return;
+        const c = PROFILE_CONFIG[profile] || PROFILE_CONFIG.Moderado;
+        const featured = c.featured
+            .map(t => assets.find(a => a.ticker === t))
+            .filter(Boolean) as Asset[];
+        setDisplayedAssets(featured.length >= 2 ? featured.slice(0, 4) : assets.slice(0, 4));
+    }, [assets, profile]);
+
+    // Rotate displayed assets every 9 seconds with fade
+    useEffect(() => {
+        if (assets.length < 4) return;
+        const interval = setInterval(() => {
+            setRowsFade(false);
+            setTimeout(() => {
+                const shuffled = [...assets].sort(() => Math.random() - 0.5);
+                setDisplayedAssets(shuffled.slice(0, 4));
+                setRowsFade(true);
+            }, 350);
+        }, 9000);
+        return () => clearInterval(interval);
+    }, [assets]);
 
     return (
         <div style={{ padding: "20px 16px 88px", maxWidth: 860, margin: "0 auto" }}>
@@ -361,17 +379,19 @@ export default function Dashboard() {
                 {/* Rows */}
                 {loading
                     ? [0, 1, 2, 3].map(i => <SkeletonRow key={i} isLast={i === 3} />)
-                    : displayAssets.map((asset, idx) => (
-                        <MarketRow
-                            key={asset.ticker}
-                            asset={asset}
-                            trm={trm}
-                            isLast={idx === displayAssets.length - 1}
-                            onClick={() => router.push(
-                                `/chat?q=${encodeURIComponent(`Analiza ${asset.name || asset.ticker}`)}`
-                            )}
-                        />
-                    ))
+                    : (
+                        <div style={{ opacity: rowsFade ? 1 : 0, transition: "opacity 0.35s ease" }}>
+                            {displayedAssets.map((asset, idx) => (
+                                <MarketRow
+                                    key={asset.ticker}
+                                    asset={asset}
+                                    trm={trm}
+                                    isLast={idx === displayedAssets.length - 1}
+                                    onClick={() => setSelectedTicker(asset.ticker)}
+                                />
+                            ))}
+                        </div>
+                    )
                 }
             </div>
 
@@ -428,6 +448,15 @@ export default function Dashboard() {
                     <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
             </button>
+
+            {/* Asset detail sheet */}
+            {selectedTicker && (
+                <MarketDetailSheet
+                    ticker={selectedTicker}
+                    trm={trm}
+                    onClose={() => setSelectedTicker(null)}
+                />
+            )}
 
         </div>
     );

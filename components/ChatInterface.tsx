@@ -522,6 +522,41 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         if (searchParams.get("mode") === "test") startRiskTest();
     }, []);
 
+    // Auto-fire analysis when coming from market detail ("Analizar con Santi AI" button)
+    useEffect(() => {
+        const q = searchParams.get("q");
+        if (!q || searchParams.get("analyze") !== "1") return;
+        const trimmed = q.trim();
+        const timer = setTimeout(() => {
+            setMessages(prev => [...prev, { role: "user", content: trimmed }]);
+            setIsLoading(true);
+            setSuggestions([]);
+            fetch(`${API}/api/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: trimmed, profile: storedProfile, history: [] }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    const hasMarket = data.market_data && !data.market_data.error;
+                    const hasCalc = !!(data.calculator_data?.amount_cop);
+                    setMessages(prev => [...prev, {
+                        role: "assistant",
+                        content: data.reply,
+                        marketData: hasMarket ? data.market_data : undefined,
+                        calculatorData: hasCalc ? data.calculator_data : undefined,
+                    }]);
+                    setSuggestions(hasMarket ? SUGGESTIONS.afterMarket : SUGGESTIONS.default);
+                })
+                .catch(() => {
+                    setMessages(prev => [...prev, { role: "assistant", content: "❌ Error al conectar con el servidor." }]);
+                    setSuggestions(SUGGESTIONS.default);
+                })
+                .finally(() => setIsLoading(false));
+        }, 900);
+        return () => clearTimeout(timer);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     const startRiskTest = () => {
         setRiskMode(true); setRiskStep(0); setRiskAnswers([]);
         setSuggestions(SUGGESTIONS.riskMode);

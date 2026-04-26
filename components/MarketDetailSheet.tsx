@@ -307,7 +307,8 @@ export default function MarketDetailSheet({ ticker, trm, onClose }: {
                             }}
                             onClick={() => {
                                 onClose();
-                                router.push(`/chat?q=${encodeURIComponent(`Analiza ${detail.name} (${ticker})`)}`);
+                                const prompt = `Dame un diagnóstico completo de ${detail.name} (${ticker}). Precio actual: $${fmtPrice(detail.price)} USD (≈${copStr} COP), cambio hoy: ${isUp ? "+" : ""}${detail.change_pct.toFixed(2)}%, rango del día: $${detail.day_low.toFixed(2)}–$${detail.day_high.toFixed(2)}.`;
+                                router.push(`/chat?q=${encodeURIComponent(prompt)}&analyze=1`);
                             }}
                         >
                             💬 Analizar con Santi AI
