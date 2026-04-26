@@ -109,17 +109,133 @@ function MarketWidget({ data, trm = TRM_FALLBACK }: { data: MarketData; trm?: nu
 
 const ASSET_OPTIONS = [
     { label: "S&P 500 (SPY)", ticker: "SPY" },
-    { label: "Bitcoin (BTC)", ticker: "BTC-USD" },
-    { label: "Apple (AAPL)", ticker: "AAPL" },
-    { label: "NVIDIA (NVDA)", ticker: "NVDA" },
-    { label: "Tesla (TSLA)", ticker: "TSLA" },
-    { label: "Ethereum (ETH)", ticker: "ETH-USD" },
-    { label: "Microsoft (MSFT)", ticker: "MSFT" },
     { label: "Nasdaq 100 (QQQ)", ticker: "QQQ" },
+    { label: "Apple (AAPL)", ticker: "AAPL" },
+    { label: "Microsoft (MSFT)", ticker: "MSFT" },
+    { label: "NVIDIA (NVDA)", ticker: "NVDA" },
+    { label: "Google (GOOGL)", ticker: "GOOGL" },
+    { label: "Amazon (AMZN)", ticker: "AMZN" },
+    { label: "Tesla (TSLA)", ticker: "TSLA" },
+    { label: "Meta (META)", ticker: "META" },
+    { label: "Bitcoin (BTC-USD)", ticker: "BTC-USD" },
+    { label: "Ethereum (ETH-USD)", ticker: "ETH-USD" },
+    { label: "Solana (SOL-USD)", ticker: "SOL-USD" },
+    { label: "Oro ETF (GLD)", ticker: "GLD" },
+    { label: "Oro Futuros (GC=F)", ticker: "GC=F" },
+    { label: "Petróleo WTI (CL=F)", ticker: "CL=F" },
+    { label: "Plata (SI=F)", ticker: "SI=F" },
+    { label: "Total Market (VTI)", ticker: "VTI" },
+    { label: "Bancolombia (BC.TO)", ticker: "BC.TO" },
 ];
 
-function CalculatorWidget({ data, profile, trm = TRM_FALLBACK }: { data: CalculatorData; profile: Profile; trm?: number }) {
-    const [ticker, setTicker] = useState("SPY");
+function SearchableSelect({ options, value, onChange }: {
+    options: { label: string; ticker: string }[];
+    value: string;
+    onChange: (ticker: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const filtered = options.filter(o =>
+        o.label.toLowerCase().includes(search.toLowerCase()) ||
+        o.ticker.toLowerCase().includes(search.toLowerCase())
+    );
+    const selected = options.find(o => o.ticker === value);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+                setOpen(false); setSearch("");
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    useEffect(() => {
+        if (open) setTimeout(() => inputRef.current?.focus(), 40);
+    }, [open]);
+
+    return (
+        <div ref={wrapRef} style={{ position: "relative" }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(162,155,254,0.2)",
+                    borderRadius: 7, color: "#fff", padding: "6px 9px", fontSize: 11,
+                    cursor: "pointer", gap: 4,
+                }}
+            >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {selected?.label || value}
+                </span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(162,155,254,0.7)" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                    <path d={open ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"} />
+                </svg>
+            </button>
+            {open && (
+                <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 200,
+                    background: "#0f1117", border: "1px solid rgba(162,155,254,0.25)",
+                    borderRadius: 8, overflow: "hidden",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                }}>
+                    <div style={{ padding: "6px 8px", borderBottom: "1px solid rgba(162,155,254,0.1)" }}>
+                        <input
+                            ref={inputRef}
+                            placeholder="Buscar activo..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            style={{
+                                width: "100%", background: "rgba(255,255,255,0.06)",
+                                border: "1px solid rgba(162,155,254,0.2)", borderRadius: 5,
+                                color: "#fff", padding: "5px 8px", fontSize: 11, outline: "none",
+                                boxSizing: "border-box",
+                            }}
+                        />
+                    </div>
+                    <div style={{ maxHeight: 160, overflowY: "auto" }}>
+                        {filtered.length === 0 && (
+                            <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(160,160,192,0.5)", textAlign: "center" }}>
+                                Sin resultados
+                            </div>
+                        )}
+                        {filtered.map(opt => (
+                            <button
+                                key={opt.ticker}
+                                type="button"
+                                onClick={() => { onChange(opt.ticker); setOpen(false); setSearch(""); }}
+                                style={{
+                                    width: "100%", textAlign: "left", padding: "7px 12px",
+                                    background: opt.ticker === value ? "rgba(162,155,254,0.15)" : "transparent",
+                                    border: "none", color: opt.ticker === value ? "#a29bfe" : "rgba(240,242,248,0.8)",
+                                    fontSize: 11, cursor: "pointer", display: "block",
+                                    borderBottom: "1px solid rgba(162,155,254,0.04)",
+                                }}
+                                onMouseEnter={e => { if (opt.ticker !== value) e.currentTarget.style.background = "rgba(162,155,254,0.08)"; }}
+                                onMouseLeave={e => { if (opt.ticker !== value) e.currentTarget.style.background = "transparent"; }}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CalculatorWidget({ data, profile, trm = TRM_FALLBACK, defaultTicker }: {
+    data: CalculatorData; profile: Profile; trm?: number; defaultTicker?: string;
+}) {
+    const resolvedDefault = defaultTicker && ASSET_OPTIONS.some(a => a.ticker === defaultTicker)
+        ? defaultTicker : "SPY";
+    const [ticker, setTicker] = useState(resolvedDefault);
     const [amountCOP, setAmountCOP] = useState(data.amount_cop || 500000);
     const [amountInput, setAmountInput] = useState((data.amount_cop || 500000).toLocaleString("es-CO"));
     const [months, setMonths] = useState(12);
@@ -243,17 +359,7 @@ function CalculatorWidget({ data, profile, trm = TRM_FALLBACK }: { data: Calcula
                     <label style={{ fontSize: 9, color: "rgba(160,160,192,0.7)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Activo
                     </label>
-                    <select
-                        value={ticker}
-                        onChange={e => setTicker(e.target.value)}
-                        style={{
-                            background: "rgba(255,255,255,0.05)", border: "1px solid rgba(162,155,254,0.2)",
-                            borderRadius: 7, color: "#fff", padding: "6px 9px", fontSize: 11,
-                            width: "100%", outline: "none", cursor: "pointer",
-                        }}
-                    >
-                        {ASSET_OPTIONS.map(a => <option key={a.ticker} value={a.ticker} style={{ background: "#16213e" }}>{a.label}</option>)}
-                    </select>
+                    <SearchableSelect options={ASSET_OPTIONS} value={ticker} onChange={setTicker} />
                 </div>
             </div>
 
@@ -747,7 +853,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                         {msg.role === "assistant" && <SantiAvatar size={28} />}
                         <div style={{ maxWidth: "76%", padding: "11px 15px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "4px 18px 18px 18px", background: msg.role === "user" ? "linear-gradient(135deg, var(--accent), #6b5ce7)" : "var(--bg-card)", border: msg.role === "user" ? "none" : "1px solid var(--border)", fontSize: 14 }}>
                             {msg.marketData?.price && <MarketWidget data={msg.marketData} trm={trm} />}
-                            {msg.calculatorData && <CalculatorWidget data={msg.calculatorData} profile={profile} trm={trm} />}
+                            {msg.calculatorData && <CalculatorWidget data={msg.calculatorData} profile={profile} trm={trm} defaultTicker={msg.marketData?.ticker} />}
                             <MarkdownText text={msg.content} />
                         </div>
                     </div>
