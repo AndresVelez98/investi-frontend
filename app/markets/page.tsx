@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../../components/Sidebar";
 import BottomNav from "../../components/BottomNav";
+import MarketDetailSheet from "../../components/MarketDetailSheet";
 
 const API = "https://investi-backend-75t5.onrender.com";
 
@@ -342,6 +343,7 @@ export default function MarketsPage() {
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [selectedCat, setSelectedCat] = useState<Category>("Todos");
     const [showSearch, setShowSearch] = useState(false);
+    const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
     const pillsRef = useRef<HTMLDivElement>(null);
 
     const fetchData = useCallback(async () => {
@@ -462,7 +464,7 @@ export default function MarketsPage() {
                                         asset={asset}
                                         trm={trm}
                                         isLast={idx === filtered.length - 1}
-                                        onClick={() => router.push(`/chat?q=${encodeURIComponent(`Analiza ${asset.name}`)}`)}
+                                        onClick={() => setSelectedTicker(asset.ticker)}
                                     />
                                 ))
                         }
@@ -494,6 +496,15 @@ export default function MarketsPage() {
 
             {/* Search bottom sheet */}
             {showSearch && <SearchSheet trm={trm} onClose={() => setShowSearch(false)} />}
+
+            {/* Asset detail sheet */}
+            {selectedTicker && (
+                <MarketDetailSheet
+                    ticker={selectedTicker}
+                    trm={trm}
+                    onClose={() => setSelectedTicker(null)}
+                />
+            )}
 
             <BottomNav />
         </div>
