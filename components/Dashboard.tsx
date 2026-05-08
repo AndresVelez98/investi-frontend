@@ -2,8 +2,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import MarketDetailSheet from "./MarketDetailSheet";
+import { getUserName, getUserProfile } from "../lib/session";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Asset {
     ticker: string;
@@ -76,22 +77,17 @@ function MarketRow({
 }) {
     const isUp = asset.change_pct >= 0;
     const [spark] = useState(() => generateSparkline(asset.change_pct));
-    const [hovered, setHovered] = useState(false);
 
     return (
         <div
+            className="market-row"
+            role="button"
+            tabIndex={0}
             onClick={onClick}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+            aria-label={`${asset.name} — ${isUp ? "sube" : "baja"} ${Math.abs(asset.change_pct).toFixed(2)}%`}
             style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "13px 20px",
                 borderBottom: isLast ? "none" : "1px solid var(--border)",
-                background: hovered ? "var(--bg-card-hover)" : "transparent",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
             }}
         >
             {/* Icon bubble */}
@@ -207,22 +203,13 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState("Inversor");
     const [profile, setProfile] = useState("Moderado");
-    const [ctaHover, setCtaHover] = useState(false);
     const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
     const [displayedAssets, setDisplayedAssets] = useState<Asset[]>([]);
     const [rowsFade, setRowsFade] = useState(true);
 
     useEffect(() => {
-        const name =
-            localStorage.getItem("investi_name") ||
-            sessionStorage.getItem("userName") ||
-            "Inversor";
-        const prof =
-            localStorage.getItem("investi_profile") ||
-            sessionStorage.getItem("profile") ||
-            "Moderado";
-        setUserName(name);
-        setProfile(prof);
+        setUserName(getUserName());
+        setProfile(getUserProfile());
 
         Promise.all([
             fetch(`${API}/api/trm`).then(r => r.json()).catch(() => ({ trm: 3588 })),
@@ -397,26 +384,8 @@ export default function Dashboard() {
 
             {/* ── Nueva Simulación CTA ── */}
             <button
+                className="cta-card"
                 onClick={() => router.push("/chat")}
-                onMouseEnter={() => setCtaHover(true)}
-                onMouseLeave={() => setCtaHover(false)}
-                style={{
-                    width: "100%",
-                    display: "flex", alignItems: "center", gap: 16,
-                    padding: "20px 22px",
-                    background: ctaHover
-                        ? "var(--bg-card-hover)"
-                        : "var(--bg-card)",
-                    border: `1px solid ${ctaHover ? "var(--accent)" : "var(--border)"}`,
-                    borderRadius: "var(--radius-lg)",
-                    boxShadow: ctaHover
-                        ? "var(--shadow-card), var(--shadow-glow)"
-                        : "var(--shadow-card)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transform: ctaHover ? "translateY(-2px)" : "translateY(0)",
-                    transition: "all 0.25s ease",
-                }}
             >
                 {/* Icon */}
                 <div style={{

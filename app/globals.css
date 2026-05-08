@@ -221,6 +221,41 @@ html, body {
   overflow: auto;
 }
 
+/* --- Market Row --- */
+.market-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.market-row:hover {
+  background: var(--bg-card-hover);
+}
+
+/* --- Dashboard CTA button --- */
+.cta-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+}
+.cta-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
 /* --- Tag --- */
 .tag {
   font-size: 11px;

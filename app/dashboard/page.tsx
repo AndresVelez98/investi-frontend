@@ -1,4 +1,3 @@
-"use client";
 import Sidebar from "../../components/Sidebar";
 import Dashboard from "../../components/Dashboard";
 import FloatingChatWidget from "../../components/FloatingChatWidget";

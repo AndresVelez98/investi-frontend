@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { clearSession } from "../lib/session";
 
 const NAV_ITEMS = [
     {
@@ -60,7 +61,8 @@ export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
 
     const handleSalir = () => {
-        router.push("/dashboard");
+        clearSession();
+        router.push("/");
     };
 
     return (

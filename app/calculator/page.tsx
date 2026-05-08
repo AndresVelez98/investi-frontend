@@ -1,4 +1,3 @@
-"use client";
 import Sidebar from "../../components/Sidebar";
 import Calculator from "../../components/Calculator";
 import BottomNav from "../../components/BottomNav";

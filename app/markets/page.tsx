@@ -5,7 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import BottomNav from "../../components/BottomNav";
 import MarketDetailSheet from "../../components/MarketDetailSheet";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 interface Asset {
     ticker: string;
@@ -75,7 +75,6 @@ function AssetRow({ asset, trm, isLast, onClick }: {
 }) {
     const isUp = asset.change_pct >= 0;
     const [spark] = useState(() => generateSparkline(asset.change_pct));
-    const [hov, setHov] = useState(false);
     const copPrice = Math.round(asset.price * trm);
     const copStr = copPrice >= 1_000_000
         ? `$${(copPrice / 1_000_000).toFixed(1)}M`
@@ -83,15 +82,14 @@ function AssetRow({ asset, trm, isLast, onClick }: {
 
     return (
         <div
+            className="market-row"
+            role="button"
+            tabIndex={0}
             onClick={onClick}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onClick()}
+            aria-label={`${asset.name} — ${isUp ? "sube" : "baja"} ${Math.abs(asset.change_pct).toFixed(2)}%`}
             style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 18px",
                 borderBottom: isLast ? "none" : "1px solid var(--border)",
-                background: hov ? "var(--bg-card-hover)" : "transparent",
-                cursor: "pointer", transition: "background 0.15s ease",
             }}
         >
             {/* Icon */}

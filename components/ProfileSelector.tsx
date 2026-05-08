@@ -1,34 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("investi_theme") as "dark" | "light" | null;
-    const initial = saved || "dark";
-    setTheme(initial);
-    document.documentElement.setAttribute("data-theme", initial);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === "dark" ? "light" : "dark";
-      localStorage.setItem("investi_theme", next);
-      document.documentElement.setAttribute("data-theme", next);
-      return next;
-    });
-  }, []);
-
-  return { theme, toggle };
-}
+import { useTheme } from "../hooks/useTheme";
 
 type Step = "auth" | "register-info" | "profile";
 type AuthMode = "login" | "register";
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 const PROFILES: { key: Profile; emoji: string; title: string; desc: string; color: string }[] = [
   {
@@ -92,6 +71,7 @@ export default function ProfileSelector() {
       const data = await res.json();
       if (!res.ok) { setError(data.detail || "Credenciales incorrectas."); return; }
 
+      document.cookie = `investi_token=${data.access_token}; path=/; SameSite=Strict`;
       sessionStorage.setItem("token", data.access_token);
       sessionStorage.setItem("userName", data.name || email.split("@")[0]);
       sessionStorage.setItem("profile", "Moderado");
@@ -151,6 +131,7 @@ export default function ProfileSelector() {
       });
       const loginData = await loginRes.json();
       if (loginRes.ok) {
+        document.cookie = `investi_token=${loginData.access_token}; path=/; SameSite=Strict`;
         sessionStorage.setItem("token", loginData.access_token);
       }
 
@@ -272,6 +253,7 @@ export default function ProfileSelector() {
             <div style={{ textAlign: "center", marginTop: 20 }}>
               <button
                 onClick={() => {
+                  document.cookie = "investi_token=guest; path=/; SameSite=Strict";
                   sessionStorage.setItem("profile", "Moderado");
                   sessionStorage.setItem("userName", "Inversor");
                   router.push("/dashboard");

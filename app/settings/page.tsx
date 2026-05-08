@@ -1,31 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-
-function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("investi_theme") as "dark" | "light" | null;
-    const initial = saved || "dark";
-    setTheme(initial);
-    document.documentElement.setAttribute("data-theme", initial);
-  }, []);
-
-  const setAndSave = useCallback((t: "dark" | "light") => {
-    setTheme(t);
-    localStorage.setItem("investi_theme", t);
-    document.documentElement.setAttribute("data-theme", t);
-  }, []);
-
-  return { theme, setAndSave };
-}
+import { useTheme } from "@/hooks/useTheme";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { theme, setAndSave } = useTheme();
+  const { theme, toggle } = useTheme();
+  const setAndSave = (t: "dark" | "light") => { if (t !== theme) toggle(); };
 
   return (
     <div className="app-layout">
