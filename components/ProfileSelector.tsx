@@ -151,7 +151,7 @@ export default function ProfileSelector() {
       alignItems: "center",
       justifyContent: "center",
       padding: 24,
-      background: "radial-gradient(ellipse at 60% 10%, rgba(79,126,248,0.08) 0%, transparent 60%), var(--bg-primary)",
+      background: "var(--bg-primary)",
       position: "relative",
     }}>
       {/* Theme toggle — top right */}
@@ -173,14 +173,16 @@ export default function ProfileSelector() {
       <div style={{ maxWidth: 520, width: "100%" }}>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <div className="animate-in" style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: 16,
-            background: "linear-gradient(135deg, var(--accent), #7c5ce4)",
+            width: 72, height: 72, borderRadius: 20,
+            background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 28, margin: "0 auto 20px",
+            fontSize: 34, margin: "0 auto 24px",
+            boxShadow: "0 0 30px rgba(108, 99, 255, 0.5), 0 0 60px rgba(0, 212, 255, 0.2)",
+            animation: "neonPulse 3s ease-in-out infinite",
           }}>📈</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: "var(--text-primary)" }}>
+          <h1 className="gradient-text" style={{ fontSize: 36, fontWeight: 800, marginBottom: 10, letterSpacing: "-0.02em" }}>
             Investi AI
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: 15 }}>
@@ -313,8 +315,8 @@ export default function ProfileSelector() {
         {step === "profile" && (
           <div className="animate-fade-in">
             <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-                Elige tu perfil, {name} 👋
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>
+                Elige tu perfil, <span className="gradient-text">{name}</span> 👋
               </h2>
               <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
                 O ve al Chat para hacer el <strong>Test de Perfil de Riesgo</strong> guiado por IA.

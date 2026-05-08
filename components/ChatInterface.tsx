@@ -432,10 +432,10 @@ function MarkdownText({ text }: { text: string }) {
 function SantiAvatar({ size = 32 }: { size?: number }) {
     return (
         <div style={{ position: "relative", flexShrink: 0 }}>
-            <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg, #6c5ce7, #a29bfe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.44, fontWeight: 700, color: "#fff" }}>
+            <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg, var(--accent), var(--accent-2))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.44, fontWeight: 700, color: "#fff", boxShadow: `0 0 ${size * 0.4}px rgba(108, 99, 255, 0.5)` }}>
                 S
             </div>
-            <div style={{ position: "absolute", bottom: 0, right: 0, width: size * 0.28, height: size * 0.28, borderRadius: "50%", background: "#00b894", border: "2px solid var(--bg-card)" }} />
+            <div style={{ position: "absolute", bottom: 0, right: 0, width: size * 0.28, height: size * 0.28, borderRadius: "50%", background: "var(--green)", border: "2px solid var(--bg-primary)", boxShadow: "0 0 6px var(--green)" }} />
         </div>
     );
 }
@@ -738,7 +738,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 position: "fixed" as const,
                 top: 0, left: 0, right: 0, bottom: 0,
                 zIndex: 600,
-                background: "var(--bg-secondary)",
+                background: "var(--bg-primary)",
             } : {}),
         }}>
 
@@ -748,7 +748,12 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 padding: isMobile ? "10px 14px" : "12px 24px",
                 borderBottom: "1px solid var(--border)",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: "var(--bg-secondary)", flexShrink: 0,
+                background: "rgba(5, 5, 16, 0.85)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                flexShrink: 0,
+                position: "relative",
+                zIndex: 2,
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {/* Back arrow — mobile only */}
@@ -828,7 +833,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 {messages.map((msg, idx) => (
                     <div key={idx} className="animate-fade-in" style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
                         {msg.role === "assistant" && <SantiAvatar size={28} />}
-                        <div style={{ maxWidth: "76%", padding: "11px 15px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "4px 18px 18px 18px", background: msg.role === "user" ? "linear-gradient(135deg, var(--accent), #6b5ce7)" : "var(--bg-card)", border: msg.role === "user" ? "none" : "1px solid var(--border)", fontSize: 14 }}>
+                        <div style={{ maxWidth: "76%", padding: "11px 15px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "4px 18px 18px 18px", background: msg.role === "user" ? "linear-gradient(135deg, var(--accent), var(--accent-2))" : "rgba(10, 15, 40, 0.6)", backdropFilter: msg.role === "assistant" ? "blur(10px)" : undefined, WebkitBackdropFilter: msg.role === "assistant" ? "blur(10px)" : undefined, border: msg.role === "user" ? "none" : "1px solid rgba(108, 99, 255, 0.2)", fontSize: 14, boxShadow: msg.role === "user" ? "0 4px 15px rgba(108, 99, 255, 0.4)" : "0 4px 15px rgba(0, 0, 0, 0.3)" }}>
                             {msg.marketData?.price && <MarketWidget data={msg.marketData} trm={trm} />}
                             {msg.calculatorData && <CalculatorWidget data={msg.calculatorData} profile={profile} trm={trm} defaultTicker={msg.marketData?.ticker} />}
                             <MarkdownText text={msg.content} />
@@ -838,8 +843,8 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 {isLoading && (
                     <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
                         <SantiAvatar size={28} />
-                        <div style={{ display: "flex", gap: 4, padding: "11px 15px", background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "4px 18px 18px 18px" }}>
-                            {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", animation: `pulse-dot 1.2s ease ${i * 0.2}s infinite` }} />)}
+                        <div style={{ display: "flex", gap: 4, padding: "11px 15px", background: "rgba(10, 15, 40, 0.6)", backdropFilter: "blur(10px)", border: "1px solid rgba(108, 99, 255, 0.2)", borderRadius: "4px 18px 18px 18px" }}>
+                            {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: i === 0 ? "var(--accent)" : i === 1 ? "var(--accent-2)" : "var(--accent-3)", animation: `pulse-dot 1.2s ease ${i * 0.2}s infinite` }} />)}
                         </div>
                     </div>
                 )}
@@ -918,7 +923,9 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             <div style={{
                 padding: isMobile ? "8px 10px 10px" : "10px 24px 14px",
                 borderTop: "1px solid var(--border)",
-                background: "var(--bg-secondary)",
+                background: "rgba(5, 5, 16, 0.85)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
                 flexShrink: 0,
                 paddingBottom: isMobile ? "max(10px, env(safe-area-inset-bottom))" : "14px",
             }}>

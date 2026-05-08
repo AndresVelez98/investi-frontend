@@ -70,8 +70,6 @@ export default function Sidebar() {
             className="sidebar"
             style={{
                 width: collapsed ? 64 : 220,
-                background: "var(--bg-secondary)",
-                borderRight: "1px solid var(--border)",
                 display: "flex",
                 flexDirection: "column",
                 padding: "20px 0",
@@ -89,11 +87,12 @@ export default function Sidebar() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
                             width: 32, height: 32, borderRadius: 8,
-                            background: "linear-gradient(135deg, var(--accent), #7c5ce4)",
+                            background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: 16, flexShrink: 0,
+                            boxShadow: "0 0 12px rgba(108, 99, 255, 0.5)",
                         }}>📈</div>
-                        <span style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)" }}>Investi AI</span>
+                        <span className="gradient-text" style={{ fontWeight: 700, fontSize: 16 }}>Investi AI</span>
                     </div>
                 )}
                 <button

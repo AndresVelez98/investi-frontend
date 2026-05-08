@@ -80,7 +80,7 @@ function MarketRow({
 
     return (
         <div
-            className="market-row"
+            className="market-row card-3d"
             role="button"
             tabIndex={0}
             onClick={onClick}
@@ -93,9 +93,11 @@ function MarketRow({
             {/* Icon bubble */}
             <div style={{
                 width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-                background: "var(--bg-secondary)", border: "1px solid var(--border)",
+                background: "rgba(108, 99, 255, 0.1)",
+                border: "1px solid rgba(108, 99, 255, 0.2)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 19,
+                backdropFilter: "blur(10px)",
             }}>
                 {ICONS[asset.ticker] || "📈"}
             </div>
@@ -250,9 +252,11 @@ export default function Dashboard() {
         <div style={{ padding: "20px 16px 88px", maxWidth: 860, margin: "0 auto" }}>
 
             {/* ── Greeting ── */}
-            <div style={{ marginBottom: 20 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", marginBottom: 2 }}>
-                    {getGreeting()}, {userName} 👋
+            <div className="animate-in" style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 2 }}>
+                    <span style={{ color: "var(--text-primary)" }}>{getGreeting()}, </span>
+                    <span className="gradient-text">{userName}</span>
+                    <span style={{ color: "var(--text-primary)" }}> 👋</span>
                 </h1>
                 <p style={{ fontSize: 13, color: "var(--text-muted)", textTransform: "capitalize" }}>
                     {formatDate()}
@@ -355,7 +359,9 @@ export default function Dashboard() {
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{
                             width: 6, height: 6, borderRadius: "50%",
-                            background: "var(--green)", animation: "pulse-dot 2s infinite",
+                            background: "var(--green)",
+                            animation: "pulse-dot 2s infinite",
+                            boxShadow: "0 0 6px var(--green)",
                         }} />
                         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                             TRM ${trm.toLocaleString("es-CO")}
@@ -384,16 +390,19 @@ export default function Dashboard() {
 
             {/* ── Nueva Simulación CTA ── */}
             <button
-                className="cta-card"
+                className="cta-card animate-in"
                 onClick={() => router.push("/chat")}
             >
                 {/* Icon */}
                 <div style={{
                     width: 50, height: 50, borderRadius: 14, flexShrink: 0,
-                    background: "var(--accent)",
+                    background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 24,
-                    boxShadow: "0 4px 16px rgba(79,126,248,0.35)",
+                    boxShadow: "0 4px 16px rgba(108, 99, 255, 0.4), 0 0 20px rgba(0, 212, 255, 0.2)",
+                    animation: "neonPulse 3s ease-in-out infinite",
+                    position: "relative",
+                    zIndex: 1,
                 }}>
                     💬
                 </div>
