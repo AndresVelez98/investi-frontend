@@ -343,6 +343,28 @@ export default function Dashboard() {
                         <path d="M9 18l6-6-6-6" />
                     </svg>
                 </div>
+
+                {/* Annual return progress bar */}
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      Proyección anual estimada
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "var(--green)" }}>{cfg.projection}</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 3,
+                      background: "linear-gradient(90deg, var(--green), var(--accent-2))",
+                      width: profile === "Conservador" ? "36%" : profile === "Agresivo" ? "88%" : "62%",
+                      transition: "width 1.2s ease",
+                    }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Conservador</span>
+                    <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Agresivo</span>
+                  </div>
+                </div>
             </div>
 
             {/* ── Mercados en Vivo ── */}
@@ -386,6 +408,24 @@ export default function Dashboard() {
                         </div>
                     )
                 }
+            </div>
+
+            {/* ── Acceso Rápido ── */}
+            <div className="quick-actions animate-in">
+              {[
+                { href: "/calculator", emoji: "🧮", label: "Calculadora", bg: "rgba(245,166,35,0.12)" },
+                { href: "/learn", emoji: "📚", label: "Aprender", bg: "rgba(108,99,255,0.12)" },
+                { href: "/chat", emoji: "💬", label: "Chat IA", bg: "rgba(0,212,255,0.12)" },
+              ].map(item => (
+                <a key={item.href} href={item.href} className="action-card">
+                  <div className="action-icon" style={{ background: item.bg }}>
+                    <span>{item.emoji}</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", letterSpacing: "0.02em", textAlign: "center" }}>
+                    {item.label}
+                  </span>
+                </a>
+              ))}
             </div>
 
             {/* ── Nueva Simulación CTA ── */}
