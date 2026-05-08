@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../hooks/useTheme";
 
@@ -8,6 +8,19 @@ type AuthMode = "login" | "register";
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 65000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch {
+    clearTimeout(timer);
+    throw new Error("TIMEOUT");
+  }
+}
 
 const PROFILES: { key: Profile; emoji: string; title: string; desc: string; color: string }[] = [
   {
@@ -74,6 +87,27 @@ export default function ProfileSelector() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
+  const loadingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pre-warm the Render server silently on mount
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${API}/`, { signal: controller.signal }).catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  // Track seconds elapsed while loading so we can show progressive feedback
+  useEffect(() => {
+    if (loading || saving) {
+      setLoadingSeconds(0);
+      loadingTimerRef.current = setInterval(() => setLoadingSeconds(s => s + 1), 1000);
+    } else {
+      setLoadingSeconds(0);
+      if (loadingTimerRef.current) clearInterval(loadingTimerRef.current);
+    }
+    return () => { if (loadingTimerRef.current) clearInterval(loadingTimerRef.current); };
+  }, [loading, saving]);
 
   // --- LOGIN ---
   const handleLogin = async () => {
@@ -84,7 +118,7 @@ export default function ProfileSelector() {
       formData.append("username", email.trim());
       formData.append("password", password);
 
-      const res = await fetch(`${API}/api/auth/login`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString(),
@@ -98,7 +132,7 @@ export default function ProfileSelector() {
       sessionStorage.setItem("profile", data.risk_profile || "Moderado");
       router.push("/dashboard");
     } catch {
-      setError("Error de conexión. Intenta de nuevo.");
+      setError("El servidor está despertando. Espera ~30 segundos e intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -126,7 +160,7 @@ export default function ProfileSelector() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`${API}/api/auth/register`, {
+      const res = await fetchWithTimeout(`${API}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -141,11 +175,12 @@ export default function ProfileSelector() {
       const data = await res.json();
       if (!res.ok) { setError(data.detail || "Error al crear la cuenta."); setSaving(false); return; }
 
+
       // Auto login after register
       const formData = new URLSearchParams();
       formData.append("username", email.trim());
       formData.append("password", password);
-      const loginRes = await fetch(`${API}/api/auth/login`, {
+      const loginRes = await fetchWithTimeout(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString(),
@@ -160,7 +195,7 @@ export default function ProfileSelector() {
       sessionStorage.setItem("userName", name.trim());
       router.push("/dashboard");
     } catch {
-      setError("Error de conexión. Intenta de nuevo.");
+      setError("El servidor está despertando. Espera ~30 segundos e intenta de nuevo.");
       setSaving(false);
     }
   };
@@ -347,8 +382,18 @@ export default function ProfileSelector() {
                   disabled={loading}
                   style={{ width: "100%", justifyContent: "center" }}
                 >
-                  <span>{loading ? "Verificando..." : authMode === "login" ? "Entrar →" : "Continuar →"}</span>
+                  <span>
+                    {loading
+                      ? (loadingSeconds > 8 ? `Conectando... (${loadingSeconds}s)` : loadingSeconds > 3 ? "Conectando con servidor..." : "Verificando...")
+                      : authMode === "login" ? "Entrar →" : "Continuar →"}
+                  </span>
                 </button>
+
+                {loading && loadingSeconds > 5 && (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", marginTop: 4, lineHeight: 1.4 }}>
+                    El servidor puede tardar ~30s en despertar la primera vez ⚡
+                  </p>
+                )}
               </div>
 
               <div style={{ textAlign: "center", marginTop: 20 }}>
@@ -452,7 +497,18 @@ export default function ProfileSelector() {
                 ))}
               </div>
               {error && <p style={{ color: "var(--red)", fontSize: 13, marginTop: 12 }}>{error}</p>}
-              {saving && <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 14, marginTop: 16 }}>Creando tu cuenta...</p>}
+              {saving && (
+                <div style={{ textAlign: "center", marginTop: 16 }}>
+                  <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+                    {loadingSeconds > 8 ? `Conectando... (${loadingSeconds}s)` : "Creando tu cuenta..."}
+                  </p>
+                  {loadingSeconds > 5 && (
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                      El servidor puede tardar ~30s en despertar la primera vez ⚡
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
