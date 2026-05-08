@@ -1,11 +1,9 @@
 "use client";
-import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { useTheme } from "@/hooks/useTheme";
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { theme, toggle } = useTheme();
   const setAndSave = (t: "dark" | "light") => { if (t !== theme) toggle(); };
 

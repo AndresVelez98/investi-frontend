@@ -1,3 +1,5 @@
+"use client";
+
 export type UserProfile = "Conservador" | "Moderado" | "Agresivo";
 
 export function getToken(): string | null {

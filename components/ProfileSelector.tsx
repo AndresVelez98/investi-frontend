@@ -7,7 +7,7 @@ type Step = "auth" | "register-info" | "profile";
 type AuthMode = "login" | "register";
 type Profile = "Conservador" | "Moderado" | "Agresivo";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 const PROFILES: { key: Profile; emoji: string; title: string; desc: string; color: string }[] = [
   {
@@ -74,7 +74,7 @@ export default function ProfileSelector() {
       document.cookie = `investi_token=${data.access_token}; path=/; SameSite=Strict`;
       sessionStorage.setItem("token", data.access_token);
       sessionStorage.setItem("userName", data.name || email.split("@")[0]);
-      sessionStorage.setItem("profile", "Moderado");
+      sessionStorage.setItem("profile", data.risk_profile || "Moderado");
       router.push("/dashboard");
     } catch {
       setError("Error de conexión. Intenta de nuevo.");

@@ -5,7 +5,7 @@ import Sidebar from "../../components/Sidebar";
 import BottomNav from "../../components/BottomNav";
 import MarketDetailSheet from "../../components/MarketDetailSheet";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 interface Asset {
     ticker: string;
@@ -82,7 +82,7 @@ function AssetRow({ asset, trm, isLast, onClick }: {
 
     return (
         <div
-            className="market-row"
+            className="market-row market-row--compact"
             role="button"
             tabIndex={0}
             onClick={onClick}
