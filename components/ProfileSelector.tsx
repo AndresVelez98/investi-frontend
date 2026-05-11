@@ -141,7 +141,8 @@ export default function ProfileSelector() {
   // --- REGISTER STEP 1: email/password ---
   const handleRegisterNext = () => {
     if (!email.trim()) { setError("Por favor ingresa tu email."); return; }
-    if (!email.includes("@")) { setError("Email inválido."); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) { setError("Email inválido."); return; }
     if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
     setError("");
     setStep("register-info");
@@ -189,6 +190,12 @@ export default function ProfileSelector() {
       if (loginRes.ok) {
         document.cookie = `investi_token=${loginData.access_token}; path=/; SameSite=Strict`;
         sessionStorage.setItem("token", loginData.access_token);
+      } else {
+        // Auto-login failed after register — rare, redirect to login page
+        setError("Cuenta creada. Por favor inicia sesión.");
+        setSaving(false);
+        setStep("auth");
+        return;
       }
 
       sessionStorage.setItem("profile", profile);

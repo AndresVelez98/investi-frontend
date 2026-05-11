@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 interface ChartPoint { date: string; price: number; }
 
@@ -126,6 +126,9 @@ export default function MarketDetailSheet({ ticker, trm, onClose }: {
 
     return (
         <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Detalle de ${ticker}`}
             style={{
                 position: "fixed", inset: 0, zIndex: 900,
                 background: "rgba(0,0,0,0.65)",
@@ -133,6 +136,7 @@ export default function MarketDetailSheet({ ticker, trm, onClose }: {
                 display: "flex", alignItems: "flex-end",
             }}
             onClick={onClose}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
         >
             <div
                 onClick={e => e.stopPropagation()}

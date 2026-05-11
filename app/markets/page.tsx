@@ -159,17 +159,19 @@ function SearchSheet({ trm, onClose }: { trm: number; onClose: () => void }) {
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setTimeout(() => inputRef.current?.focus(), 80);
+        const t = setTimeout(() => inputRef.current?.focus(), 80);
+        return () => clearTimeout(t);
     }, []);
 
     const search = useCallback(async (q?: string) => {
-        const term = (q || query).trim();
+        const term = (q ?? query).trim();
         if (!term) return;
         setLoading(true);
         setResult(null);
         setNotFound(false);
         try {
             const res = await fetch(`${API}/api/market/search?q=${encodeURIComponent(term)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (data.results?.length > 0) setResult(data.results[0]);
             else setNotFound(true);
@@ -184,6 +186,9 @@ function SearchSheet({ trm, onClose }: { trm: number; onClose: () => void }) {
 
     return (
         <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Explorar mercados"
             style={{
                 position: "fixed", inset: 0, zIndex: 800,
                 background: "rgba(0,0,0,0.6)",
@@ -191,6 +196,7 @@ function SearchSheet({ trm, onClose }: { trm: number; onClose: () => void }) {
                 display: "flex", alignItems: "flex-end",
             }}
             onClick={onClose}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
         >
             <div
                 style={{

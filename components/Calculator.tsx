@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
+
 const POPULAR_TICKERS = [
     { ticker: "AAPL", label: "Apple" },
     { ticker: "TSLA", label: "Tesla" },
@@ -69,7 +71,7 @@ export default function Calculator() {
         setLoading(true);
         setResult(null);
         try {
-            const res = await fetch("https://investi-backend-75t5.onrender.com/api/calculate", {
+            const res = await fetch(`${API}/api/calculate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ticker: ticker.trim().toUpperCase(), amount: amt, months }),

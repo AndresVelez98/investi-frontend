@@ -143,7 +143,7 @@ export default function Sidebar() {
             </nav>
 
             {/* Footer */}
-            <div style={{ padding: collapsed ? "12px 8px" : "12px 8px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ padding: "12px 8px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4 }}>
                 {/* Settings link */}
                 <Link
                     href="/settings"

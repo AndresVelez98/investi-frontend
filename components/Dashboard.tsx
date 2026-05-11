@@ -237,15 +237,19 @@ export default function Dashboard() {
     // Rotate displayed assets every 9 seconds with fade
     useEffect(() => {
         if (assets.length < 4) return;
+        let fadeTimer: ReturnType<typeof setTimeout> | null = null;
         const interval = setInterval(() => {
             setRowsFade(false);
-            setTimeout(() => {
+            fadeTimer = setTimeout(() => {
                 const shuffled = [...assets].sort(() => Math.random() - 0.5);
                 setDisplayedAssets(shuffled.slice(0, 4));
                 setRowsFade(true);
             }, 350);
         }, 9000);
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            if (fadeTimer) clearTimeout(fadeTimer);
+        };
     }, [assets]);
 
     return (

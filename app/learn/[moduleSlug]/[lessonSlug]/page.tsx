@@ -4,7 +4,7 @@ import BottomNav from "../../../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 interface QuizQuestion {
     id: number;
@@ -114,6 +114,7 @@ function Quiz({
                     })),
                 }),
             });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const result = await res.json();
             onResult(result);
         } catch {
@@ -256,8 +257,8 @@ function QuizResults({ result, onRetry }: { result: QuizResult; onRetry: () => v
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: "var(--text-primary)" }}>
                 Revisión de respuestas
             </h3>
-            {result.results.map((r, i) => (
-                <div key={i} className="glass-card" style={{
+            {result.results.map((r) => (
+                <div key={r.question_id} className="glass-card" style={{
                     padding: "16px 20px", marginBottom: 10,
                     borderLeft: `3px solid ${r.is_correct ? "var(--green)" : "var(--red)"}`,
                 }}>
@@ -301,6 +302,7 @@ export default function LessonPage() {
     const [trm, setTrm] = useState(3588);
 
     useEffect(() => {
+        if (!lessonSlug) return;
         const token = sessionStorage.getItem("token");
         if (!token) { router.push("/"); return; }
 
@@ -316,7 +318,8 @@ export default function LessonPage() {
             })
             .catch(() => router.push("/learn"))
             .finally(() => setLoading(false));
-    }, [lessonSlug, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [lessonSlug]);
 
     // Replace TRM placeholder so lesson examples stay current
     const injectTrm = (text: string) =>

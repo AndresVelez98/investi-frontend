@@ -1,12 +1,12 @@
-"use client";
-
 export type UserProfile = "Conservador" | "Moderado" | "Agresivo";
 
 export function getToken(): string | null {
+    if (typeof window === "undefined") return null;
     return sessionStorage.getItem("token");
 }
 
 export function getUserName(): string {
+    if (typeof window === "undefined") return "Inversor";
     return (
         sessionStorage.getItem("userName") ||
         localStorage.getItem("investi_name") ||
@@ -15,6 +15,7 @@ export function getUserName(): string {
 }
 
 export function getUserProfile(): UserProfile {
+    if (typeof window === "undefined") return "Moderado";
     const p =
         sessionStorage.getItem("profile") ||
         localStorage.getItem("investi_profile");
@@ -23,6 +24,7 @@ export function getUserProfile(): UserProfile {
 }
 
 export function clearSession(): void {
+    if (typeof window === "undefined") return;
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("userName");
     sessionStorage.removeItem("profile");

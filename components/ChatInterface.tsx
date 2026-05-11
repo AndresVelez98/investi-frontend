@@ -59,8 +59,8 @@ function MarketWidget({ data, trm = TRM_FALLBACK }: { data: MarketData; trm?: nu
     useEffect(() => {
         if (!data.ticker) return;
         fetch(`${API}/api/market/${data.ticker}/sparkline`)
-            .then(r => r.json())
-            .then(d => d.prices?.length > 1 && setPrices(d.prices))
+            .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+            .then(d => { if (d.prices?.length > 1) setPrices(d.prices); })
             .catch(() => {});
     }, [data.ticker]);
 
@@ -216,11 +216,18 @@ function CalculatorWidget({ data, profile, trm = TRM_FALLBACK, defaultTicker }: 
     const [amountCOP, setAmountCOP] = useState(data.amount_cop || 500000);
     const [amountInput, setAmountInput] = useState((data.amount_cop || 500000).toLocaleString("es-CO"));
     const [months, setMonths] = useState(12);
-    const [apiResult, setApiResult] = useState<any>(null);
+    const [apiResult, setApiResult] = useState<{
+        monthly_breakdown: { month: number; value: number }[];
+        avg_monthly_return_pct: number;
+        initial_amount: number;
+        asset_name: string;
+        data_period: string;
+        error?: string;
+    } | null>(null);
     const [loading, setLoading] = useState(false);
     const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Call /api/calculate when ticker or amount changes (debounced 600ms)
+    // Call /api/calculate when ticker, amount, or trm changes (debounced 600ms)
     useEffect(() => {
         if (fetchTimer.current) clearTimeout(fetchTimer.current);
         fetchTimer.current = setTimeout(async () => {
@@ -233,11 +240,13 @@ function CalculatorWidget({ data, profile, trm = TRM_FALLBACK, defaultTicker }: 
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ ticker, amount: amountUSD, months: 48 }),
                 });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 if (!json.error) setApiResult(json);
             } catch { /* ignore */ } finally { setLoading(false); }
         }, 600);
-    }, [ticker, amountCOP]);
+        return () => { if (fetchTimer.current) clearTimeout(fetchTimer.current); };
+    }, [ticker, amountCOP, trm]);
 
     // Derive display values from API result or fallback profile rates
     const FALLBACK_MONTHLY: Record<Profile, number> = { Conservador: 0.005, Moderado: 0.0083, Agresivo: 0.0125 };
@@ -507,7 +516,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
     const [trm, setTrm] = useState(TRM_FALLBACK);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [isListening, setIsListening] = useState(false);
-    const recognitionRef = useRef<any>(null);
+    const recognitionRef = useRef<{ stop: () => void } | null>(null);
     const inputBeforeVoiceRef = useRef("");
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -603,6 +612,8 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
 
     useEffect(() => {
         if (searchParams.get("mode") === "test") startRiskTest();
+    // startRiskTest only calls stable setState functions; searchParams is from Next.js and stable during mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Auto-fire analysis when coming from market detail ("Analizar con Santi AI" button)
@@ -610,6 +621,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
         const q = searchParams.get("q");
         if (!q || searchParams.get("analyze") !== "1") return;
         const trimmed = q.trim();
+        const capturedProfile = storedProfile;
         const timer = setTimeout(() => {
             setMessages(prev => [...prev, { role: "user", content: trimmed }]);
             setIsLoading(true);
@@ -617,9 +629,9 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             fetch(`${API}/api/chat`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: trimmed, profile: storedProfile, history: [] }),
+                body: JSON.stringify({ message: trimmed, profile: capturedProfile, history: [] }),
             })
-                .then(r => r.json())
+                .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
                 .then(data => {
                     const hasMarket = data.market_data && !data.market_data.error;
                     const hasCalc = !!(data.calculator_data?.amount_cop);
@@ -632,13 +644,15 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                     setSuggestions(hasMarket ? SUGGESTIONS.afterMarket : SUGGESTIONS.default);
                 })
                 .catch(() => {
-                    setMessages(prev => [...prev, { role: "assistant", content: "❌ Error al conectar con el servidor." }]);
+                    setMessages(prev => [...prev, { role: "assistant", content: "Error al conectar con el servidor." }]);
                     setSuggestions(SUGGESTIONS.default);
                 })
                 .finally(() => setIsLoading(false));
         }, 900);
         return () => clearTimeout(timer);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // searchParams and storedProfile are stable string values at mount time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const startRiskTest = () => {
         setRiskMode(true); setRiskStep(0); setRiskAnswers([]);
@@ -673,6 +687,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ answers: newAnswers, user_name: userName }),
                 });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 const newProfile = (["Conservador", "Moderado", "Agresivo"].includes(data.profile) ? data.profile : "Moderado") as Profile;
                 setProfile(newProfile);
@@ -708,6 +723,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: trimmed, profile, history }),
             });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const hasMarket = data.market_data && !data.market_data.error;
             const hasCalc = data.calculator_data && data.calculator_data.amount_cop > 0;
@@ -721,7 +737,7 @@ export default function ChatInterface({ mode = "page" }: { mode?: "page" | "floa
             else if (hasMarket) setSuggestions(SUGGESTIONS.afterMarket);
             else setSuggestions(SUGGESTIONS.default);
         } catch {
-            setMessages(prev => [...prev, { role: "assistant", content: "❌ Error al conectar con el servidor." }]);
+            setMessages(prev => [...prev, { role: "assistant", content: "Error al conectar con el servidor." }]);
             setSuggestions(SUGGESTIONS.default);
         } finally { setIsLoading(false); }
     };

@@ -4,7 +4,7 @@ import BottomNav from "../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 interface Module {
     id: number;
@@ -255,18 +255,26 @@ export default function LearnPage() {
         const headers = { Authorization: `Bearer ${token}` };
 
         Promise.all([
-            fetch(`${API}/api/education/modules`, { headers }).then(r => r.json()),
-            fetch(`${API}/api/education/stats`, { headers }).then(r => r.json()),
+            fetch(`${API}/api/education/modules`, { headers }).then(r => {
+                if (!r.ok) throw new Error("modules");
+                return r.json();
+            }),
+            fetch(`${API}/api/education/stats`, { headers }).then(r => {
+                if (!r.ok) throw new Error("stats");
+                return r.json();
+            }),
             fetch(`${API}/api/trm`).then(r => r.json()).catch(() => ({ trm: 3588 })),
         ])
             .then(([modulesData, statsData, trmData]) => {
-                setModules(modulesData);
+                setModules(Array.isArray(modulesData) ? modulesData : []);
                 setStats(statsData);
                 if (trmData?.trm > 1000) setTrm(trmData.trm);
             })
             .catch(() => setError("Error cargando datos de educación"))
             .finally(() => setLoading(false));
-    }, [router]);
+    // router.push is stable — omitting router from deps prevents double-fetch on navigation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div className="app-layout">

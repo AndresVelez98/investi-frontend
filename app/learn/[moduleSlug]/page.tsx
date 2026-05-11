@@ -4,7 +4,7 @@ import BottomNav from "../../../components/BottomNav";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
-const API = "https://investi-backend-75t5.onrender.com";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "https://investi-backend-75t5.onrender.com";
 
 interface Lesson {
     id: number;
@@ -124,10 +124,11 @@ export default function ModuleLessonsPage() {
                 if (!r.ok) throw new Error("Módulo no encontrado");
                 return r.json();
             })
-            .then(setLessons)
+            .then(data => setLessons(Array.isArray(data) ? data : []))
             .catch(() => setError("No se pudo cargar el módulo"))
             .finally(() => setLoading(false));
-    }, [moduleSlug, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [moduleSlug]);
 
     const completed = lessons.filter(l => l.is_completed).length;
     const total = lessons.length;
