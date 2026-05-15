@@ -289,7 +289,7 @@ export default function Dashboard() {
                             fontSize: 11, fontWeight: 600, color: "var(--text-muted)",
                             letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6,
                         }}>
-                            Tu Resumen Norte
+                            Portafolio Estimado
                         </div>
                         <div style={{
                             fontSize: 34, fontWeight: 800, color: "var(--text-primary)",
