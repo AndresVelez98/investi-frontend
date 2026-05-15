@@ -62,7 +62,7 @@ export default function Sidebar() {
 
     const handleSalir = () => {
         clearSession();
-        router.push("/");
+        router.push("/login");
     };
 
     return (

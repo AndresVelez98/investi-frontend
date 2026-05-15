@@ -1,5 +1,5 @@
-import ProfileSelector from "../components/ProfileSelector";
+import LandingPage from "../components/LandingPage";
 
 export default function Home() {
-  return <ProfileSelector />;
+  return <LandingPage />;
 }

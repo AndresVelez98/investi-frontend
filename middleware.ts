@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// matcher in config already limits execution to protected routes,
-// so the function only needs to check for a valid session cookie.
-// Note: we verify cookie existence + basic JWT shape only.
-// Full signature validation requires a backend /verify call.
+// Accept a real JWT (3 base64 segments) or the intentional guest marker
+function isValidSession(token: string | undefined): boolean {
+    if (!token) return false;
+    return token === "guest" || token.split(".").length === 3;
+}
+
 export function middleware(req: NextRequest) {
+    const { pathname } = req.nextUrl;
     const token = req.cookies.get("investi_token")?.value;
+    const authed = isValidSession(token);
 
-    // Accept a real JWT (3 base64 segments) or the intentional guest marker
-    const isValidSession =
-        token === "guest" || (!!token && token.split(".").length === 3);
+    // /login → redirect to /dashboard if already logged in
+    if (pathname === "/login" && authed) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
 
-    if (!isValidSession) {
-        return NextResponse.redirect(new URL("/", req.url));
+    // Protected routes → redirect to /login if not authenticated
+    const protectedPrefixes = [
+        "/dashboard",
+        "/chat",
+        "/markets",
+        "/calculator",
+        "/learn",
+        "/settings",
+    ];
+
+    const isProtected = protectedPrefixes.some(
+        (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+    );
+
+    if (isProtected && !authed) {
+        return NextResponse.redirect(new URL("/login", req.url));
     }
 
     return NextResponse.next();
@@ -20,6 +39,7 @@ export function middleware(req: NextRequest) {
 
 export const config = {
     matcher: [
+        "/login",
         "/dashboard/:path*",
         "/chat/:path*",
         "/markets/:path*",
